@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NEXUM Recrutamento</title><meta name="theme-color" content="#14203D">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Montserrat:wght@700;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
@@ -59,7 +59,7 @@ a{color:var(--pri)}button,input,select,textarea{font:inherit;color:inherit}
 .sala video{background:#000}.sala #v-remoto{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
 .sala #v-local{position:absolute;right:16px;bottom:16px;width:min(26%,220px);aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.6)}
 .sala .est{position:absolute;left:16px;top:14px;background:rgba(0,0,0,.45);padding:5px 12px;border-radius:999px;font-size:13.5px}
-.sala .ctrl{display:flex;gap:10px;justify-content:center;padding:14px;background:#0E1630}.sala .ctrl .btn.sec{background:#26304F;border-color:#26304F;color:#fff}
+.sala .ctrl{display:flex;gap:10px;justify-content:center;padding:14px;background:#0E1630}.sala .ctrl .btn.sec,.sala .ctrl .btn.sec:hover,.sala .ctrl a.btn.sec{background:#26304F;border-color:#26304F;color:#fff!important}
 .sala .lado{background:var(--bg);color:var(--ink);overflow-y:auto;padding:16px}
 @media(max-width:860px){.sala{grid-template-columns:1fr;grid-template-rows:1fr auto}.sala .lado{max-height:45vh}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -86,7 +86,154 @@ a{color:var(--pri)}button,input,select,textarea{font:inherit;color:inherit}
 .kcard[draggable="true"]{cursor:grab}.kcard.arrastando{opacity:.45}.kcol.alvo{outline:2px dashed var(--pri);outline-offset:-4px}
 .slots{display:flex;flex-wrap:wrap;gap:8px}.slot{display:flex;align-items:center;gap:8px;border:1px solid var(--pri);border-radius:8px;padding:6px 10px;background:var(--sf)}.slot b{color:var(--pri)}.slot span{font-size:13px;color:var(--mut)}.slot.ocup{border-color:var(--line);background:var(--line2)}.slot.ocup b{color:var(--ink)}
 .panel.ia{border-color:#C9D4FF;background:#F7F9FF}
-.sala .vids.grupo{display:flex;flex-direction:column}.sala .grade{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;padding:8px;align-content:center}.vg-tile{position:relative;background:#000;border-radius:8px;aspect-ratio:4/3;overflow:hidden}.vg-tile video{width:100%;height:100%;object-fit:cover}.vg-tile span{position:absolute;left:8px;bottom:6px;background:rgba(0,0,0,.55);color:#fff;padding:2px 10px;border-radius:999px;font-size:12.5px}.vg-eu{position:absolute;right:16px;bottom:16px;width:min(22%,180px);aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.6);z-index:3;background:#000}@media(max-width:560px){.sala .ctrl{flex-wrap:wrap;gap:6px;padding:10px}.sala .ctrl .btn{padding:7px 10px;font-size:13.5px;min-height:36px}}</style></head>
+.sala .vids.grupo{display:flex;flex-direction:column}.sala .grade{flex:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:8px;padding:8px;align-content:center}.vg-tile{position:relative;background:#000;border-radius:8px;aspect-ratio:4/3;overflow:hidden}.vg-tile video{width:100%;height:100%;object-fit:cover}.vg-tile span{position:absolute;left:8px;bottom:6px;background:rgba(0,0,0,.55);color:#fff;padding:2px 10px;border-radius:999px;font-size:12.5px}.vg-eu{position:absolute;right:16px;bottom:16px;width:min(22%,180px);aspect-ratio:4/3;object-fit:cover;border-radius:10px;border:2px solid rgba(255,255,255,.6);z-index:3;background:#000}@media(max-width:560px){.sala .ctrl{flex-wrap:wrap;gap:6px;padding:10px}.sala .ctrl .btn{padding:7px 10px;font-size:13.5px;min-height:36px}}/* ===== NEXUM Recrutamento · identidade visual v2 ===== */
+:root{--ink:#1C2140;--ink2:#4A5170;--ink3:#7A809B;--paper:#F5F6FA;--card:#FFFFFF;--line:#E4E6EF;--line2:#EEF0F5;--pri:#3B4BD8;--pri-d:#2E3BB0;--pri-s:#ECEEFD;
+--e-inscrito:#64748B;--e-triagem:#4F46E5;--e-teste:#7C3AED;--e-entrevista:#C2730A;--e-aprovado:#0F8A5F;--e-reprovado:#D0364F;--e-desistiu:#9AA0B4;
+--ok:#0F8A5F;--ok-s:#E7F6EF;--warn:#B76E00;--warn-s:#FFF4E0;--bad:#D0364F;--bad-s:#FDECEF;
+--f-disp:'Bricolage Grotesque',ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif;--f-txt:'Figtree',ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+html,body{background:var(--paper);color:var(--ink);font-family:var(--f-txt);font-size:14.5px;line-height:1.5;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:var(--f-disp);color:var(--ink);letter-spacing:-.01em}
+.hint{color:var(--ink3)}
+:focus-visible{outline:2px solid var(--pri);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+/* ----- recrutador ----- */
+.app{background:var(--paper)}
+.side{background:var(--card)!important;color:var(--ink)!important;border-right:1px solid var(--line);width:236px;padding:20px 14px 16px!important}
+.side .marca{font-family:var(--f-disp);font-weight:800;font-size:20px;color:var(--ink)!important;letter-spacing:-.02em;line-height:1.15}
+
+.side .emp{color:var(--ink3)!important;font-size:13px;margin:6px 0 20px;padding-bottom:16px;border-bottom:1px solid var(--line2)}
+.side .nav{gap:2px}
+.side .nav button{display:flex;align-items:center;gap:11px;color:var(--ink2)!important;background:transparent!important;font-size:14.5px;font-weight:600;padding:9px 12px;border-radius:9px;position:relative}
+.side .nav button svg{width:19px;height:19px;flex:0 0 19px;color:var(--ink3)}
+.side .nav button:hover{background:var(--line2)!important;color:var(--ink)!important}
+.side .nav button.on,.side .nav button[aria-current=page]{background:var(--pri-s)!important;color:var(--pri-d)!important}
+.side .nav button.on svg,.side .nav button[aria-current=page] svg{color:var(--pri)}
+.side .eu{border-top:1px solid var(--line2);color:var(--ink)!important;padding-top:14px}
+.side .eu b{color:var(--ink)!important}.side .eu span{color:var(--ink3)!important}
+.side .eu .btn{color:var(--ink2)!important;padding-left:0}
+.main{background:var(--paper)}
+.top{background:transparent!important;border:0!important;padding:28px 36px 6px!important;align-items:flex-end}
+.top h1{font-size:30px;font-weight:800;margin:0;letter-spacing:-.025em}
+#t-sub{margin:4px 0 0;color:var(--ink2);font-size:15px;max-width:70ch}
+#view{padding:18px 36px 48px!important;max-width:1280px}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:none;padding:20px 22px}
+.panel h2{font-size:17px;font-weight:700}
+.kpis{gap:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:none}
+.kpi b{font-family:var(--f-disp);font-size:32px;font-weight:800;letter-spacing:-.03em;color:var(--ink)}
+.kpi span{color:var(--ink2);font-size:13.5px}
+.btn{font-family:var(--f-txt);font-weight:700;border-radius:10px;font-size:14px;padding:9px 16px;background:var(--pri);border-color:var(--pri)}.btn,.btn:hover,button.btn,a.btn{color:#fff!important}.btn.sec,.btn.sec:hover,button.btn.sec{color:var(--ink)!important}.btn.ghost,.btn.ghost:hover,button.btn.ghost{color:var(--pri)!important}
+.btn:hover{background:var(--pri-d)}
+.btn.sec{background:var(--card);color:var(--ink);border:1px solid var(--line)}
+.btn.sec:hover{background:var(--line2)}
+.btn.ghost{background:transparent;color:var(--pri);border-color:transparent}
+.btn.ghost:hover{background:var(--pri-s)}
+.btn.sm{padding:6px 12px;font-size:13px;border-radius:8px}
+.btn.ok{background:var(--ok);border-color:var(--ok)}.btn.bad{background:var(--bad);border-color:var(--bad)}
+.inp,select.inp,textarea.inp{border:1px solid var(--line);border-radius:10px;font-family:var(--f-txt);font-size:14.5px;background:var(--card);color:var(--ink)}
+.inp:focus{border-color:var(--pri);box-shadow:0 0 0 3px var(--pri-s)}
+.fld label{font-size:13.5px;font-weight:600;color:var(--ink2)}
+.pill{font-weight:700;font-size:12.5px;border-radius:999px;padding:3px 10px}
+.pill.ok{background:var(--ok-s);color:var(--ok)}.pill.warn{background:var(--warn-s);color:var(--warn)}.pill.bad{background:var(--bad-s);color:var(--bad)}.pill.pri{background:var(--pri-s);color:var(--pri-d)}
+.tabs{border-bottom:1px solid var(--line);gap:4px}
+.tabs button{font-family:var(--f-txt);font-weight:600;font-size:14.5px;color:var(--ink2);padding:10px 14px}
+.tabs button.on,.tabs button[aria-selected=true]{color:var(--pri-d);box-shadow:inset 0 -2px 0 var(--pri)}
+.tbl-wrap{border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:auto}
+.tbl-wrap table{border-collapse:collapse;width:100%}
+.tbl-wrap th{font-size:13px;font-weight:600;color:var(--ink3);text-transform:none;letter-spacing:0;background:transparent;border-bottom:1px solid var(--line);padding:12px 16px}
+.tbl-wrap td{padding:14px 16px;border-bottom:1px solid var(--line2);font-size:14.5px;vertical-align:middle}
+.tbl-wrap tr:last-child td{border-bottom:0}
+.list li{border-color:var(--line2);padding:12px 0}
+.list li .t div:first-child{font-weight:500}
+.empty,.vazio-b{text-align:center;color:var(--ink2);padding:28px 16px}
+/* funil do painel */
+.funil{display:flex;gap:4px;height:14px;border-radius:7px;overflow:hidden;margin:6px 0 16px}
+.funil i{display:block;min-width:6px}
+.funil-l{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.funil-l button{all:unset;cursor:pointer;border-radius:10px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.funil-l button:hover{background:var(--line2)}
+.funil-l button:focus-visible{outline:2px solid var(--pri)}
+.funil-l b{font-family:var(--f-disp);font-size:30px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.funil-l span{font-size:13.5px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+.funil-l span::before{content:"";width:9px;height:9px;border-radius:3px;background:var(--c)}
+/* vagas */
+.mini-f{display:flex;gap:2px;height:6px;border-radius:3px;overflow:hidden;margin-top:8px;max-width:260px;background:var(--line2)}
+.mini-f i{display:block}
+.mn{position:relative;display:inline-block}
+.mn-l{position:absolute;right:0;top:calc(100% + 4px);z-index:30;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px;min-width:190px;box-shadow:0 10px 30px rgba(28,33,64,.14);display:flex;flex-direction:column}
+.mn-l[hidden]{display:none}.tbl-wrap:has(.mn){overflow:visible}
+.mn-l .btn{justify-content:flex-start;text-align:left;width:100%;color:var(--ink)!important}
+/* quadro de candidatos */
+.kanban{gap:10px;padding-bottom:12px;align-items:start;grid-auto-columns:minmax(186px,1fr)}
+.kanban .kcol{background:#EDEFF5;border-radius:14px;flex:1 1 0!important;width:auto!important;min-width:188px!important;padding:12px 10px 10px;border-top:4px solid var(--c,var(--ink3))}
+.kcol h3{font-family:var(--f-txt);font-size:14px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;padding:0 4px 8px}
+.kcol h3 .hint{background:var(--card);color:var(--ink2);border-radius:999px;padding:0 8px;font-weight:700;font-size:12.5px}
+.kcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;gap:4px;box-shadow:0 1px 0 rgba(28,33,64,.04)}
+.kcard:hover{border-color:#C9CDE0}
+.kc-top{display:flex;align-items:center;gap:9px}
+.av{width:32px;height:32px;border-radius:50%;flex:0 0 32px;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:12.5px;color:#fff;background:hsl(var(--h,230) 45% 46%)}
+.kcard b{font-size:14.5px}
+.kc-d{font-size:12.5px;color:var(--ink3);margin-top:2px}.kcard .pill{white-space:normal;align-self:flex-start;max-width:100%}
+.kcard .ch i{font-style:normal;background:var(--line2);border-radius:6px;padding:1px 7px;font-size:12px;color:var(--ink2)}
+.kcol[data-col=inscrito]{--c:var(--e-inscrito)}.kcol[data-col=triagem]{--c:var(--e-triagem)}.kcol[data-col=teste]{--c:var(--e-teste)}.kcol[data-col=entrevista]{--c:var(--e-entrevista)}.kcol[data-col=aprovado]{--c:var(--e-aprovado)}.kcol[data-col=reprovado]{--c:var(--e-reprovado)}.kcol[data-col=desistiu]{--c:var(--e-desistiu)}
+/* trilho nas cores das etapas */
+.trilho .st.feito::before,.trilho .st.agora::before{background:var(--pri)}
+.modal{border-radius:18px}
+.modal-h h2,.modal-h h3{font-family:var(--f-disp);font-size:21px}
+@media(max-width:900px){.top{padding:18px 18px 4px!important}#view{padding:14px 18px 40px!important}.top h1{font-size:24px}.funil-l{grid-template-columns:repeat(3,1fr)}}
+/* ----- logo ----- */
+.lg{display:inline-flex;align-items:center;gap:calc(10px * var(--s,1));line-height:1}
+.lg-n{flex:0 0 auto;filter:drop-shadow(0 4px 10px rgba(16,60,200,.25))}.lg-escuro .lg-n{filter:none}
+.lg-t{display:flex;flex-direction:column;gap:calc(5px * var(--s,1))}
+.lg-l1{display:flex;align-items:center;gap:calc(10px * var(--s,1))}
+.lg-w{font-family:'Montserrat','Bricolage Grotesque',ui-sans-serif,system-ui,sans-serif;font-weight:800;font-size:calc(25px * var(--s,1));letter-spacing:-.01em}
+.lg-claro .lg-w,.lg-claro .lg-rh{color:#fff}.lg-escuro .lg-w,.lg-escuro .lg-rh{color:#0E1A4A}
+.lg-x{background:linear-gradient(to top right,currentColor 0 52%,#2F8CFF 52% 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.lg-claro .lg-x{color:#fff}.lg-escuro .lg-x{color:#0E1A4A}
+.lg-bar{width:2px;height:calc(24px * var(--s,1));background:#2F8CFF;border-radius:1px;display:block}
+.lg-rh{font-family:'Montserrat','Bricolage Grotesque',ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:calc(24px * var(--s,1))}
+.lg-sub{font-family:var(--f-txt);font-weight:500;font-size:calc(13px * var(--s,1));letter-spacing:.01em}
+.lg-claro .lg-sub{color:rgba(255,255,255,.9)}.lg-escuro .lg-sub{color:var(--ink2)}
+/* ----- tela de entrada ----- */
+.lg-auth{min-height:100vh;display:grid;grid-template-columns:minmax(0,1.12fr) minmax(0,1fr);background:#F4F7FD;position:relative;overflow:hidden}
+.lg-esq{position:relative;color:#fff;padding:clamp(40px,7vw,96px) clamp(32px,6vw,90px);background:radial-gradient(120% 90% at 30% 20%,#123E9C 0%,#0A2A72 45%,#061A4B 100%);clip-path:polygon(0 0,100% 0,82% 100%,0 100%);z-index:1;display:flex;flex-direction:column}
+.lg-esq::before{content:"";position:absolute;inset:auto auto -12% -10%;width:70%;aspect-ratio:1;background:linear-gradient(45deg,rgba(255,255,255,.05),transparent 60%);transform:rotate(45deg);pointer-events:none}
+.lg-esq .lg{margin-bottom:clamp(36px,6vh,72px)}
+.lg-slogan{font-family:var(--f-txt);font-weight:500;font-size:clamp(26px,2.6vw,36px);line-height:1.18;color:#fff;max-width:13ch;margin:0;letter-spacing:-.01em}
+.lg-slogan em{font-style:normal;font-weight:800;color:#36A3FF}
+.lg-traco{display:block;width:42px;height:3px;border-radius:2px;background:#36A3FF;margin:22px 0 0}
+.lg-ilus{position:absolute;right:16%;top:31%;width:min(32%,330px);pointer-events:none}
+.lg-feat{display:flex;gap:0;margin-top:auto;padding-top:48px}
+.lg-feat div{display:flex;flex-direction:column;align-items:flex-start;gap:10px;padding:0 26px;font-size:15px;line-height:1.3;color:rgba(255,255,255,.95);max-width:150px}
+.lg-feat div:first-child{padding-left:0}
+.lg-feat div+div{border-left:1px solid rgba(54,163,255,.55)}
+.lg-feat svg{width:34px;height:34px;color:#fff}
+.lg-dir{display:flex;align-items:center;justify-content:center;padding:48px clamp(24px,5vw,72px);background:linear-gradient(135deg,#FFFFFF 0%,#F2F5FC 100%)}
+.lg-card{width:100%;max-width:470px}
+.lg-card h2{font-family:var(--f-disp);font-size:clamp(30px,3vw,40px);font-weight:800;color:#0E1A4A;margin:0 0 8px;letter-spacing:-.02em}
+.lg-card>p{font-size:17px;color:#3C4566;margin:0 0 30px;line-height:1.45}
+.lg-card>p b{color:#0E1A4A}
+.lg-in{position:relative;margin-bottom:16px}
+.lg-in svg.ic{position:absolute;left:18px;top:50%;transform:translateY(-50%);width:22px;height:22px;color:#4A5578;pointer-events:none}
+.lg-in .inp{height:58px;padding:0 52px 0 54px;font-size:16px;border-radius:10px;border:1.5px solid #D5DBEA;background:#fff}
+.lg-in .inp:focus{border-color:#1C4FCF;box-shadow:0 0 0 4px rgba(28,79,207,.12)}
+.lg-olho{position:absolute;right:10px;top:50%;transform:translateY(-50%);width:40px;height:40px;border:0;background:transparent;border-radius:8px;color:#4A5578;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.lg-olho:hover{background:#EEF2FB}
+.lg-ent{width:100%;height:58px;margin-top:8px;border-radius:10px!important;background:#0B47B8!important;border-color:#0B47B8!important;font-size:17px!important;display:flex;align-items:center;justify-content:center;gap:12px}
+.lg-ent:hover{background:#093C9C!important}
+.lg-ent svg{width:22px;height:22px}
+.lg-link{background:none;border:0;padding:0;color:#0B5FD8;font-weight:600;font-size:15px;cursor:pointer;font-family:var(--f-txt)}
+.lg-link:hover{text-decoration:underline}
+.lg-alt{margin:20px 0 0;color:#5B6485;font-size:14.5px}
+.lg-rod{display:flex;align-items:center;gap:16px;margin-top:56px;color:#0E1A4A}
+.lg-rod::before,.lg-rod::after{content:"";flex:1;height:1px;background:#D5DBEA}
+.lg-rod span{text-align:center;font-weight:700;font-size:15px;line-height:1.3}.lg-rod small{display:block;font-weight:500;color:#5B6485;font-size:12.5px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+@media(max-width:900px){.lg-auth{grid-template-columns:1fr}.lg-esq{clip-path:none;padding:30px 24px 28px}.lg-esq .lg{margin-bottom:22px;--s:.86!important}.lg-ilus,.lg-feat{display:none}.lg-slogan{font-size:24px;max-width:none}.lg-traco{margin-top:14px}.lg-dir{padding:30px 22px 40px}.lg-card h2{font-size:28px}.lg-rod{margin-top:36px}}
+/* logo no menu */
+.side .marca{padding:2px 2px 0}
+.side .marca .lg span{display:inline;opacity:1!important;letter-spacing:inherit}.side .marca .lg-t{display:flex!important;flex-direction:column}.side .marca .lg-l1{display:flex!important}.side .marca .lg-w{font-size:calc(25px * var(--s))!important;color:#0E1A4A!important;font-weight:800!important;letter-spacing:-.01em}.side .marca .lg-rh{font-size:calc(24px * var(--s))!important;color:#0E1A4A!important;font-weight:700!important}.side .marca .lg-sub{display:block!important;font-size:calc(13px * var(--s))!important;color:var(--ink2)!important;font-weight:500}.side .marca .lg-x{display:inline!important;-webkit-text-fill-color:transparent}
+.sala .ctrl .btn.sec{color:#fff!important}.sala .ctrl .btn.sec:hover{background:#34406A}</style></head>
 <body><div id="toasts"></div><div id="modal-root"></div><p style="padding:40px;text-align:center;color:#5F6B85">Carregando…</p>
 <script>/* =====================================================================
    NEXUM Recrutamento e Seleção — núcleo compartilhado (recrutador e candidato)
@@ -329,12 +476,52 @@ function notas(a) { const p = privDe(a.id), ne = p.notas || {}, r = {};
 const _fecharBase = closeModal; closeModal = () => { _fecharBase(); if (S.pend) { S.pend = false; render(); } };
 let _rt; const rerender = () => { clearTimeout(_rt); _rt = setTimeout(() => { if ($('#modal-root .ov') || $('.sala')) { S.pend = true; return; } render(); }, 80); };
 /* ---------- Acesso ---------- */
+/* ---------- Logo NEXUM em vetor (N em fita + NEXUM | RH) ---------- */
+function marcaN(tam = 56) {
+  const g = 'lgN' + Math.random().toString(36).slice(2, 7);
+  return `<svg class="lg-n" width="${tam}" height="${Math.round(tam * 0.9)}" viewBox="20 20 580 520" aria-hidden="true"><defs>
+    <linearGradient id="${g}e" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2E93FF"/><stop offset=".45" stop-color="#1250D4"/><stop offset="1" stop-color="#041A52"/></linearGradient>
+    <linearGradient id="${g}d" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1E62E8"/><stop offset=".5" stop-color="#1350D2"/><stop offset="1" stop-color="#05205E"/></linearGradient>
+    <linearGradient id="${g}f" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#46ACFF"/><stop offset=".28" stop-color="#2170EE"/><stop offset=".7" stop-color="#1243BE"/><stop offset="1" stop-color="#082A84"/></linearGradient>
+    <linearGradient id="${g}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#021545" stop-opacity="0"/><stop offset="1" stop-color="#021545" stop-opacity=".55"/></linearGradient></defs>
+    <path d="M30 528V196c0-30 18-48 46-50L226 260v136z" fill="url(#${g}e)"/>
+    <path d="M226 250v146L30 528z" fill="url(#${g}s)" opacity=".7"/>
+    <path d="M404 124 578 30v330H404z" fill="url(#${g}d)"/>
+    <path d="M404 230h174v130H404z" fill="url(#${g}s)"/>
+    <path d="M36 168c8-32 42-56 78-82 26-19 50-44 74-54 22-9 44-4 60 12l316 290c16 15 16 32 2 46l-96 90c-16 15-38 15-54 0L104 166c-18-16-48-20-68 2z" fill="url(#${g}f)"/>
+    <path d="M60 140c30-34 80-74 118-100" stroke="#8FD0FF" stroke-opacity=".55" stroke-width="5" stroke-linecap="round" fill="none"/></svg>`;
+}
+function logoNexum({ claro = true, sub = 'Recrutamento e Seleção', tam = 1 } = {}) {
+  return `<span class="lg ${claro ? 'lg-claro' : 'lg-escuro'}" style="--s:${tam}" role="img" aria-label="Nexum RH${sub ? ', ' + sub : ''}">${marcaN(Math.round(66 * tam))}<span class="lg-t"><span class="lg-l1"><span class="lg-w">NE<span class="lg-x">X</span>UM</span><i class="lg-bar"></i><span class="lg-rh">RH</span></span>${sub ? `<span class="lg-sub">${sub}</span>` : ''}</span></span>`;
+}
+const ILUS_LOGIN = `<svg class="lg-ilus" viewBox="0 0 340 330" aria-hidden="true"><defs><filter id="lgbl"><feGaussianBlur stdDeviation="3.2"/></filter>
+  <radialGradient id="lgvi" cx=".5" cy=".42" r=".6"><stop offset="0" stop-color="#1E4FB8"/><stop offset="1" stop-color="#0B2A74"/></radialGradient>
+  <linearGradient id="lgar" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7DB6FF"/><stop offset=".5" stop-color="#2B6BE0"/><stop offset="1" stop-color="#123C9A"/></linearGradient>
+  <linearGradient id="lgcb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2A63D6"/><stop offset="1" stop-color="#0B2766"/></linearGradient></defs>
+  <g fill="#3B78E8" opacity=".38" filter="url(#lgbl)"><circle cx="40" cy="120" r="17"/><path d="M8 178a32 30 0 0 1 64 0z"/><circle cx="292" cy="44" r="15"/><path d="M262 96a30 28 0 0 1 60 0z"/><circle cx="300" cy="150" r="18"/><path d="M266 210a34 32 0 0 1 68 0z"/><circle cx="246" cy="22" r="11"/></g>
+  <path d="M206 228l14-14 92 92a10 10 0 0 1-14 14z" fill="url(#lgcb)"/><circle cx="140" cy="146" r="112" fill="url(#lgvi)"/><circle cx="140" cy="146" r="112" fill="none" stroke="url(#lgar)" stroke-width="12"/><circle cx="140" cy="146" r="98" fill="none" stroke="#5E9BFF" stroke-opacity=".35" stroke-width="2"/>
+  <circle cx="140" cy="118" r="34" fill="#4F8FF0"/><path d="M84 214a56 54 0 0 1 112 0z" fill="#4F8FF0"/><path d="M70 90a90 90 0 0 1 60-40" stroke="#fff" stroke-opacity=".28" stroke-width="6" stroke-linecap="round" fill="none"/></svg>`;
+const IC_LOGIN = { user: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>', mail: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>',
+  lock: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/><circle cx="12" cy="16" r="1.2" fill="currentColor"/></svg>', city: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>',
+  emp: '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16"/><path d="M15 9h4a1 1 0 0 1 1 1v11"/><path d="M8 8h3M8 12h3M8 16h3M2.5 21h19"/></svg>',
+  olho: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>', seta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>' };
 function telaLogin(aviso) {
-  document.body.innerHTML = `<div id="toasts"></div><div id="modal-root"></div><main class="auth"><section class="auth-lado"><div class="marca">NEXUM <span>Recrutamento</span></div><h1>Do primeiro currículo à contratação, num só lugar.</h1>${trilho('teste')}<p>Vagas com link próprio, questionários com correção automática, entrevistas por vídeo e o histórico de cada candidato.</p></section>
-    <section class="auth-form"><div class="tabs" role="tablist"><button class="on" data-a="in" role="tab">Entrar</button><button data-a="up" role="tab">Criar conta da empresa</button></div>${aviso ? `<p class="pill bad" style="white-space:normal;margin-bottom:12px">${esc(aviso)}</p>` : ''}<form id="f-auth" novalidate></form></section></main>`;
-  const form = a => { $$('.auth-form .tabs button').forEach(b => b.classList.toggle('on', b.dataset.a === a));
-    $('#f-auth').innerHTML = a === 'in' ? `<div class="fld"><label for="a-e">E-mail</label><input class="inp" id="a-e" type="email" autocomplete="username"></div><div class="fld"><label for="a-s">Senha</label><input class="inp" id="a-s" type="password" autocomplete="current-password"></div><button class="btn" style="width:100%">Entrar</button><button type="button" class="btn ghost" id="a-r" style="width:100%;margin-top:6px">Esqueci minha senha</button>`
-      : `<div class="fld"><label for="a-emp">Nome da empresa</label><input class="inp" id="a-emp" autocomplete="organization"></div><div class="fld"><label for="a-cid">Cidade</label><input class="inp" id="a-cid" placeholder="Ex.: Foz do Iguaçu/PR"></div><div class="fld"><label for="a-n">Seu nome</label><input class="inp" id="a-n" autocomplete="name"></div><div class="fld"><label for="a-e">E-mail</label><input class="inp" id="a-e" type="email" autocomplete="username"></div><div class="fld"><label for="a-s">Senha (mínimo de 6 caracteres)</label><input class="inp" id="a-s" type="password" autocomplete="new-password"></div><button class="btn" style="width:100%">Criar conta</button>`;
+  document.body.innerHTML = `<div id="toasts"></div><div id="modal-root"></div><main class="lg-auth">
+    <section class="lg-esq">${logoNexum({ claro: true, tam: 1.75 })}<h1 class="lg-slogan">Conectando talentos às <em>melhores oportunidades.</em></h1><i class="lg-traco"></i>${ILUS_LOGIN}
+      <div class="lg-feat"><div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></svg>Encontre talentos</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="7.5" r="3"/><circle cx="5" cy="9.5" r="2.2"/><circle cx="19" cy="9.5" r="2.2"/><path d="M6.5 19a5.5 5.5 0 0 1 11 0"/><path d="M1.5 18a3.6 3.6 0 0 1 5-3.2M22.5 18a3.6 3.6 0 0 0-5-3.2"/></svg>Construa seu time</div>
+        <div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="13" r="8"/><circle cx="11" cy="13" r="4.5"/><circle cx="11" cy="13" r="1" fill="currentColor"/><path d="m11 13 8-8M16 5h3v3"/></svg>Faça o futuro acontecer</div></div></section>
+    <section class="lg-dir"><div class="lg-card"><h2 id="lg-t">Bem-vindo(a)!</h2><p id="lg-p">Acesse o sistema <b>Nexum RH</b> Recrutamento e Seleção.</p>${aviso ? `<p class="pill bad" style="white-space:normal;margin:0 0 16px">${esc(aviso)}</p>` : ''}<form id="f-auth" novalidate></form>
+      <div class="lg-rod"><span>Nexum RH<small>Recrutamento e Seleção</small></span></div></div></section></main>`;
+  const campo = (id, ic, rot, tipo, ac, extra = '') => `<div class="lg-in">${IC_LOGIN[ic]}<label class="sr" for="${id}">${rot}</label><input class="inp" id="${id}" type="${tipo}" placeholder="${rot}" autocomplete="${ac}" ${extra}>${tipo === 'password' ? `<button type="button" class="lg-olho" aria-label="Mostrar senha" data-olho="${id}">${IC_LOGIN.olho}</button>` : ''}</div>`;
+  const form = a => {
+    $('#lg-t').textContent = a === 'in' ? 'Bem-vindo(a)!' : 'Criar conta da empresa'; $('#lg-p').innerHTML = a === 'in' ? 'Acesse o sistema <b>Nexum RH</b> Recrutamento e Seleção.' : 'Você será o administrador. Depois, convide a sua equipe em Equipe.';
+    $('#f-auth').innerHTML = a === 'in' ? `${campo('a-e', 'user', 'E-mail', 'email', 'username')}${campo('a-s', 'lock', 'Senha', 'password', 'current-password')}<button class="btn lg-ent">Entrar ${IC_LOGIN.seta}</button>
+        <p style="margin:18px 0 0"><button type="button" class="lg-link" id="a-r">Esqueceu sua senha?</button></p><p class="lg-alt">Primeira vez aqui? <button type="button" class="lg-link" data-a="up">Criar conta da empresa</button></p>`
+      : `${campo('a-emp', 'emp', 'Nome da empresa', 'text', 'organization')}${campo('a-cid', 'city', 'Cidade (ex.: Foz do Iguaçu/PR)', 'text', 'address-level2')}${campo('a-n', 'user', 'Seu nome', 'text', 'name')}${campo('a-e', 'mail', 'E-mail', 'email', 'username')}${campo('a-s', 'lock', 'Senha (mínimo de 6 caracteres)', 'password', 'new-password')}<button class="btn lg-ent">Criar conta ${IC_LOGIN.seta}</button>
+        <p class="lg-alt">Já tem conta? <button type="button" class="lg-link" data-a="in">Entrar</button></p>`;
+    $$('#f-auth [data-a]').forEach(b => b.onclick = () => form(b.dataset.a));
+    $$('#f-auth [data-olho]').forEach(b => b.onclick = () => { const i = $('#' + b.dataset.olho), v = i.type === 'password'; i.type = v ? 'text' : 'password'; b.setAttribute('aria-label', v ? 'Esconder senha' : 'Mostrar senha'); });
     $('#f-auth').onsubmit = async ev => { ev.preventDefault(); const b = $('#f-auth .btn'), e = $('#a-e').value.trim(), s = $('#a-s').value; if (!emailOk(e)) return toast('Informe um e-mail válido.', true); b.disabled = true;
       try { if (a === 'in') await auth.signInWithEmailAndPassword(e, s);
         else { const ne = $('#a-emp').value.trim(), nn = $('#a-n').value.trim(); if (ne.length < 2 || nn.length < 2) { b.disabled = false; return toast('Preencha o nome da empresa e o seu nome.', true); }
@@ -342,8 +529,9 @@ function telaLogin(aviso) {
           await emp(id).set({ nome: ne, cidade: $('#a-cid').value.trim(), ownerUid: cr.user.uid, criadoEm: agora(), msgs: MSGS_PADRAO, retencaoMeses: 12 });
           await db.doc(`users/${cr.user.uid}`).set({ eid: id, role: 'admin', nome: nn, email: e.toLowerCase(), ativo: true, criadoEm: agora() }); S.criando = false; entrar(cr.user); } }
       catch (er) { S.criando = false; b.disabled = false; toast(msgErro(er), true); } };
-    const r = $('#a-r'); if (r) r.onclick = async () => { const e = $('#a-e').value.trim(); if (!emailOk(e)) return toast('Digite seu e-mail acima para receber o link.', true); try { await auth.sendPasswordResetEmail(e); toast('Enviamos um link para redefinir a senha. Confira também o spam.'); } catch (er) { toast(msgErro(er), true); } }; };
-  $$('.auth-form .tabs button').forEach(b => b.onclick = () => form(b.dataset.a)); form('in');
+    const r = $('#a-r'); if (r) r.onclick = async () => { const e = $('#a-e').value.trim(); if (!emailOk(e)) return toast('Digite seu e-mail acima para receber o link.', true); try { await auth.sendPasswordResetEmail(e); toast('Enviamos um link para redefinir a senha. Confira também o spam.'); } catch (er) { toast(msgErro(er), true); } };
+    const f1 = $('#f-auth .inp'); if (f1 && window.innerWidth > 900) f1.focus(); };
+  form('in');
 }
 async function sairCom(m) { S.avisoLogin = m; await auth.signOut(); telaLogin(m); }
 async function entrar(u) {
@@ -362,13 +550,13 @@ function assinar() {
 /* ---------- Estrutura ---------- */
 const NAV = [['painel', 'Painel'], ['vagas', 'Vagas'], ['cands', 'Candidatos'], ['quest', 'Questionários'], ['ent', 'Entrevistas'], ['banco', 'Banco de talentos'], ['relat', 'Relatórios'], ['equipe', 'Equipe', 'admin'], ['config', 'Configurações', 'admin']];
 function shell() {
-  document.body.innerHTML = `<div id="toasts"></div><div id="modal-root"></div><div class="app"><nav class="side" aria-label="Menu"><div class="marca">NEXUM <span>Recrutamento</span></div><div class="emp" id="marca-emp"></div>
-    <div class="nav">${NAV.filter(n => !n[2] || ehAdmin()).map(([k, t]) => `<button data-v="${k}">${t}</button>`).join('')}</div><div class="eu"><b>${esc(S.me.nome)}</b><span>${PAPEIS[S.me.role]}</span><button class="btn ghost sm" id="b-sair">Sair</button></div></nav>
-    <main class="main"><header class="top"><h1 id="t-view"></h1></header><div id="view"></div></main></div>`;
+  document.body.innerHTML = `<div id="toasts"></div><div id="modal-root"></div><div class="app"><nav class="side" aria-label="Menu"><div class="marca">${logoNexum({ claro: false, tam: .72 })}</div><div class="emp" id="marca-emp"></div>
+    <div class="nav">${NAV.filter(n => !n[2] || ehAdmin()).map(([k, t]) => `<button data-v="${k}">${ICONES[k] || ''}<span>${t}</span></button>`).join('')}</div><div class="eu"><b>${esc(S.me.nome)}</b><span>${PAPEIS[S.me.role]}</span><button class="btn ghost sm" id="b-sair">Sair</button></div></nav>
+    <main class="main"><header class="top"><div><h1 id="t-view"></h1><p id="t-sub"></p></div></header><div id="view"></div></main></div>`;
   $$('.side .nav button').forEach(b => b.onclick = () => go(b.dataset.v)); $('#b-sair').onclick = () => auth.signOut(); go(S.view);
 }
 function go(v) { S.view = v; $$('.side .nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); render(); window.scrollTo(0, 0); }
-function render() { const el = $('#view'); if (!el) return; regEtapas(); $('#t-view').textContent = (NAV.find(n => n[0] === S.view) || [, ''])[1]; ({ painel: e => { vPainel(e); painelSLA(e); }, vagas: vVagas, cands: e => { vCands(e); extrasCands3(e); }, quest: vQuest, ent: vEnt, banco: vBanco, relat: e => { vRelat(e); painelExperiencia(e); }, equipe: vEquipe, config: vConfig })[S.view](el); }
+function render() { const el = $('#view'); if (!el) return; regEtapas(); $('#t-view').textContent = (NAV.find(n => n[0] === S.view) || [, ''])[1]; { const sb = $('#t-sub'); if (sb) sb.textContent = SUBT[S.view] || ''; } ({ painel: e => { vPainel(e); painelSLA(e); }, vagas: vVagas, cands: e => { vCands(e); extrasCands3(e); }, quest: vQuest, ent: vEnt, banco: vBanco, relat: e => { vRelat(e); painelExperiencia(e); }, equipe: vEquipe, config: vConfig })[S.view](el); }
 /* ---------- Painel ---------- */
 function vPainel(el) {
   const ap = S.d.apps, ativos = ap.filter(a => !final(a)), hj = iso(), mes = hj.slice(0, 7), cont = {}; ativos.forEach(a => cont[a.etapa] = (cont[a.etapa] || 0) + 1); cont.resultado = ap.filter(a => final(a)).length;
@@ -377,7 +565,7 @@ function vPainel(el) {
   const novos = ap.filter(a => a.etapa === 'inscrito' && !a.desistiu).sort((a, b) => b.criadoEm.localeCompare(a.criadoEm)), parados = ativos.filter(a => a.etapa !== 'inscrito' && diffD(new Date(a.atualizadoEm || a.criadoEm), new Date()) > 7);
   const item = (a, t) => `<li class="link" data-ab="${a.id}"><div class="t"><div><b>${esc(a.perfil.nome)}</b> · ${esc(vagaDe(a.vagaId).titulo || a.vagaTitulo || '')}</div><div>${t}</div></div></li>`;
   el.innerHTML = `<div class="kpis" style="margin-bottom:16px"><div class="kpi"><b>${S.d.vagas.filter(v => v.status === 'aberta').length}</b><span>vagas abertas</span></div><div class="kpi"><b>${ativos.length}</b><span>candidatos em andamento</span></div><div class="kpi"><b>${entHoje.length}</b><span>entrevistas hoje</span></div><div class="kpi"><b>${ap.filter(a => a.etapa === 'aprovado' && (a.decisao || {}).em && a.decisao.em.slice(0, 7) === mes).length}</b><span>aprovados no mês</span></div></div>
-    <section class="panel"><h2 style="margin-bottom:10px">Processo seletivo agora</h2>${trilho('', cont)}</section>
+    ${funilHero(cont)}
     <div class="cols"><section class="panel"><h2 style="margin-bottom:6px">Entrevistas de hoje</h2>${entHoje.length ? `<ul class="list">${entHoje.map(e => `<li><div class="t"><div><b>${fhm(e.inicio)}</b> · ${esc(e.candNome)}</div><div>${esc(e.vagaTitulo)} · ${e.tipo === 'video' ? 'vídeo' : e.tipo}</div></div>${e.tipo === 'video' ? `<button class="btn sm" data-sala="${e.id}">Entrar</button>` : ''}</li>`).join('')}</ul>` : '<p class="hint">Nenhuma entrevista hoje.</p>'}</section>
     <section class="panel"><h2 style="margin-bottom:6px">Respostas escritas para corrigir</h2>${corrigirL.length ? `<ul class="list">${corrigirL.slice(0, 8).map(x => item(x.a, 'Teste respondido aguardando a sua nota')).join('')}</ul>` : '<p class="hint">Tudo corrigido.</p>'}</section>
     <section class="panel"><h2 style="margin-bottom:6px">Novas inscrições</h2>${novos.length ? `<ul class="list">${novos.slice(0, 8).map(a => item(a, `Inscrito em ${fdt(a.criadoEm)}`)).join('')}</ul>` : '<p class="hint">Nenhuma inscrição nova. Divulgue o link das vagas.</p>'}</section>
@@ -394,8 +582,8 @@ function vVagasLista(el) {
   const l = S.d.vagas.slice().sort((a, b) => (a.status === 'aberta' ? 0 : 1) - (b.status === 'aberta' ? 0 : 1) || (b.criadoEm || '').localeCompare(a.criadoEm || ''));
   const st = { aberta: ['ok', 'Aberta'], pausada: ['warn', 'Pausada'], fechada: ['', 'Fechada'] };
   el.innerHTML = `<div class="row" style="margin-bottom:14px"><span class="hint">Cada vaga tem um link próprio para divulgar no Instagram, WhatsApp e site.</span><span class="sp"></span><button class="btn sec" id="vg-p">Link de todas as vagas</button>${ehEditor() ? '<button class="btn sec" id="vg-mo">Modelos e duplicar</button><button class="btn" id="vg-n">Nova vaga</button>' : '<button class="btn" id="vg-pd">Pedir uma vaga</button>'}</div>
-    ${l.length ? `<div class="tbl-wrap"><table><thead><tr><th>Vaga</th><th>Status</th><th class="n">Inscritos</th><th class="n">Em andamento</th><th class="n">Aprovados</th><th></th></tr></thead><tbody>${l.map(v => { const a = S.d.apps.filter(x => x.vagaId === v.id); return `<tr><td><b>${esc(v.titulo)}</b><div class="hint">${esc([v.local, v.modalidade, v.contrato].filter(Boolean).join(', '))}${v.prazo ? `. Inscrições até ${fd(v.prazo)}` : ''}</div></td><td><span class="pill ${st[v.status][0]}">${st[v.status][1]}</span></td><td class="n">${a.length}</td><td class="n">${a.filter(x => !final(x)).length}</td><td class="n">${a.filter(x => x.etapa === 'aprovado').length}</td>
-      <td class="n" style="white-space:nowrap"><button class="btn ghost sm" data-vc="${v.id}">Candidatos</button><button class="btn ghost sm" data-vl="${v.id}">Link</button><button class="btn ghost sm" data-vq="${v.id}">Cartaz</button>${ehEditor() ? `<button class="btn ghost sm" data-vd="${v.id}">Duplicar</button><button class="btn ghost sm" data-ve="${v.id}">Editar</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>`
+    ${l.length ? `<div class="tbl-wrap"><table><thead><tr><th>Vaga</th><th>Status</th><th class="n">Inscritos</th><th class="n">Em andamento</th><th class="n">Aprovados</th><th></th></tr></thead><tbody>${l.map(v => { const a = S.d.apps.filter(x => x.vagaId === v.id); return `<tr><td><b style="font-size:15.5px">${esc(v.titulo)}</b><div class="hint">${esc([v.local, v.modalidade, v.contrato].filter(Boolean).join(', '))}${v.prazo ? `. Inscrições até ${fd(v.prazo)}` : ''}</div>${miniFunil(a)}</td><td><span class="pill ${st[v.status][0]}">${st[v.status][1]}</span></td><td class="n">${a.length}</td><td class="n">${a.filter(x => !final(x)).length}</td><td class="n">${a.filter(x => x.etapa === 'aprovado').length}</td>
+      <td class="n" style="white-space:nowrap"><button class="btn sec sm" data-vc="${v.id}">Ver candidatos</button> <span class="mn"><button class="btn ghost sm mn-b" aria-label="Mais ações da vaga" aria-haspopup="true" aria-expanded="false">⋯</button><span class="mn-l" hidden><button class="btn ghost sm" data-vl="${v.id}">Copiar link da vaga</button><button class="btn ghost sm" data-vq="${v.id}">Gerar cartaz com QR code</button>${ehEditor() ? `<button class="btn ghost sm" data-ve="${v.id}">Editar vaga</button><button class="btn ghost sm" data-vd="${v.id}">Duplicar vaga</button>` : ''}</span></span></td></tr>`; }).join('')}</tbody></table></div>`
       : `<div class="panel empty"><b>Nenhuma vaga ainda</b>Crie a primeira vaga e divulgue o link para receber candidatos.${ehEditor() ? '<div style="margin-top:12px"><button class="btn" id="vg-n2">Nova vaga</button></div>' : ''}</div>`}`;
   const n = $('#vg-n', el) || $('#vg-n2', el); if (n) n.onclick = () => formVaga(); if ($('#vg-n2', el) && $('#vg-n', el)) $('#vg-n2', el).onclick = () => formVaga();
   $('#vg-p', el).onclick = () => mostrarLink(linkPortal(), 'Link de todas as vagas abertas'); const mo = $('#vg-mo', el); if (mo) mo.onclick = escolherModeloVaga; const pdd = $('#vg-pd', el); if (pdd) pdd.onclick = formPedido; $$('[data-vd]', el).forEach(b => b.onclick = () => duplicarVaga(vagaDe(b.dataset.vd)));
@@ -425,7 +613,7 @@ function vCands(el) {
   let l = S.d.apps.filter(a => (!S.vagaSel || a.vagaId === S.vagaSel) && (!q || JSON.stringify([a.perfil.nome, a.perfil.cidade, a.perfil.habilidades, a.perfil.email]).toLowerCase().includes(q)));
   const cols = colunasKanban();
   el.innerHTML = `<div class="row" style="margin-bottom:14px"><select class="inp" id="cd-v" style="width:auto;max-width:280px" aria-label="Vaga">${opts([['', 'Todas as vagas'], ...vagas.map(v => [v.id, v.titulo])], S.vagaSel)}</select><input class="inp" id="cd-b" style="width:auto;flex:1;min-width:180px" placeholder="Buscar por nome, cidade ou habilidade" value="${esc(S.busca)}"><label class="row hint" style="gap:6px"><input type="checkbox" id="cd-e" ${S.encerrados ? 'checked' : ''}> Mostrar reprovados e desistentes</label><label class="row hint" style="gap:6px" title="Esconde nome, contato e currículo até a entrevista"><input type="checkbox" id="cd-cg" ${S.cego ? 'checked' : ''}> Triagem às cegas</label>${S.vagaSel ? '<button class="btn sec sm" id="cd-cmp">Comparar finalistas</button>' : ''}</div>
-    <div class="kanban">${cols.map(([k, t]) => { const c = l.filter(a => colDe(a) === k).sort((a, b) => (b.atualizadoEm || b.criadoEm).localeCompare(a.atualizadoEm || a.criadoEm)); return `<section class="kcol" data-col="${k}" aria-label="${t}"><h3>${t} <span class="hint">${c.length}</span></h3>${c.map(cardCand).join('') || '<p class="hint" style="padding:8px 4px">Vazio</p>'}</section>`; }).join('')}</div>`;
+    <div class="kanban">${cols.map(([k, t]) => { const c = l.filter(a => colDe(a) === k).sort((a, b) => (b.atualizadoEm || b.criadoEm).localeCompare(a.atualizadoEm || a.criadoEm)); return `<section class="kcol" data-col="${k}" aria-label="${t}"><h3>${t} <span class="hint">${c.length}</span></h3>${c.map(cardCand).join('') || '<p class="hint" style="padding:10px 6px;text-align:center">Ninguém nesta etapa</p>'}</section>`; }).join('')}</div>`;
   $('#cd-v', el).onchange = e => { S.vagaSel = e.target.value; render(); }; $('#cd-e', el).onchange = e => { S.encerrados = e.target.checked; render(); };
   const b = $('#cd-b', el); b.oninput = () => { clearTimeout(b._t); b._t = setTimeout(() => { S.busca = b.value; render(); const n = $('#cd-b'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 250); };
   $$('[data-ab]', el).forEach(c => c.onclick = () => abrirCand(c.dataset.ab)); extrasCands(el);
@@ -433,7 +621,7 @@ function vCands(el) {
 function cardCand(a) {
   const n = notas(a), ch = []; if (n.tri && n.tri.pct != null) ch.push(`Triagem ${n.tri.pct}%`); n.testes.forEach(t => t.pct != null && ch.push(`Teste ${t.pct}%${t.pend ? '*' : ''}`)); if (n.ent) ch.push(`Entrevista ${String(n.ent).replace('.', ',')}`); const pvc = privDe(a.id); if (pvc.ia) ch.push(`IA ${pvc.ia.aderencia}/10`); if (a.convite && !a.agendamento && etapaV(a) === 'entrevista') ch.push('Escolhendo horário');
   const novo = (a.mensagens || []).some(m => m.de === 'cand' && (!a.lidoRh || m.em > a.lidoRh));
-  return `<button class="kcard" data-ab="${a.id}" draggable="${ehEditor() && !final(a)}"><b>${esc(nomeVis(a))}</b>${novo ? ' <span class="pill pri">mensagem</span>' : ''}<span class="hint">${esc(S.vagaSel ? (ocultar(a) ? '' : a.perfil.cidade || '') : vagaDe(a.vagaId).titulo || a.vagaTitulo || '')}</span>${ch.length ? `<span class="ch">${ch.map(x => `<i>${x}</i>`).join('')}</span>` : ''}${n.tri && n.tri.elim ? '<span class="pill bad" style="margin-top:4px">Não atende a pergunta eliminatória</span>' : ''}</button>`;
+  return `<button class="kcard" data-ab="${a.id}" draggable="${ehEditor() && !final(a)}"><span class="kc-top"><span class="av" style="--h:${hueNome(nomeVis(a))}" aria-hidden="true">${esc(iniciaisN(nomeVis(a)))}</span><b>${esc(nomeVis(a))}</b></span>${novo ? ' <span class="pill pri">mensagem</span>' : ''}<span class="hint">${esc(S.vagaSel ? (ocultar(a) ? '' : a.perfil.cidade || '') : vagaDe(a.vagaId).titulo || a.vagaTitulo || '')}</span>${ch.length ? `<span class="ch">${ch.map(x => `<i>${x}</i>`).join('')}</span>` : ''}${n.tri && n.tri.elim ? '<span class="pill bad" style="margin-top:4px">Não atende a pergunta eliminatória</span>' : ''}</button>`;
 }
 /* ---------- Ficha do candidato ---------- */
 function abrirCand(id, aba = 'resumo') {
@@ -1008,7 +1196,7 @@ function cfgPrazos(w) {
 }
 /* ---------- Candidatos: retorno em lote, prazos e candidatura rápida ---------- */
 function extrasCands3(el) {
-  $$('.kcard', el).forEach(c => { const a = S.d.apps.find(x => x.id === c.dataset.ab); if (!a) return; const at = atrasoSLA(a);
+  $$('.kcard', el).forEach(c => { const a = S.d.apps.find(x => x.id === c.dataset.ab); if (!a) return; const at = atrasoSLA(a); { const dd = diffD(new Date(a.atualizadoEm || a.criadoEm), new Date()); c.insertAdjacentHTML('beforeend', `<span class="kc-d">${dd ? `${dd} dia${dd === 1 ? '' : 's'} nesta etapa` : 'Movido hoje'}${a.origem ? ` · ${esc(a.origem)}` : ''}</span>`); }
     if (at) c.insertAdjacentHTML('beforeend', `<span class="pill bad" style="margin-top:4px">Parado +${at}d além do prazo</span>`); if (a.rapida && !((a.perfil || {}).resumo)) c.insertAdjacentHTML('beforeend', '<span class="pill warn" style="margin-top:4px">Candidatura rápida</span>');
     if (a.propostaResp) c.insertAdjacentHTML('beforeend', `<span class="pill ${a.propostaResp.status === 'aceita' ? 'ok' : 'bad'}" style="margin-top:4px">Proposta ${a.propostaResp.status}</span>`); });
   if (!S.vagaSel || !ehEditor()) return; const bar = $('.row', el); if (bar) bar.insertAdjacentHTML('beforeend', '<button class="btn sec" id="cd-lote">Retorno em lote</button>');
@@ -1052,6 +1240,30 @@ function salaHost(ent) {
   $('#sc-ok', s.el).onclick = () => salvarScorecard(ent, s.el); parar = painelTranscricao(s.el, ref, ent); log(`Entrou na sala de entrevista com ${ent.candNome}`);
 }
 document.addEventListener('click', e => { const q = e.target.closest && e.target.closest('[data-vq]'); if (q) cartazVaga(vagaDe(q.dataset.vq)); });
+
+/* ---------- identidade visual v2: ícones, subtítulos, funil e menus ---------- */
+const ICO = (d) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+const ICONES = { painel: ICO('<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'), vagas: ICO('<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'), cands: ICO('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7"/><path d="M18 14.5a6.5 6.5 0 0 1 3.5 5.5"/>'),
+  quest: ICO('<path d="M9 4h6"/><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 11l2 2 4-4"/><path d="M9 17h6"/>'), ent: ICO('<rect x="2.5" y="6" width="13" height="12" rx="2"/><path d="M15.5 10.5 21 7.5v9l-5.5-3"/>'), banco: ICO('<ellipse cx="12" cy="5.5" rx="8" ry="2.5"/><path d="M4 5.5v6c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5v-6"/><path d="M4 11.5v6c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5v-6"/>'),
+  relat: ICO('<path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/>'), equipe: ICO('<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>'), config: ICO('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/>') };
+const SUBT = { painel: 'O que precisa da sua atenção hoje no processo seletivo.', vagas: 'Abra vagas, divulgue o link e acompanhe quantas pessoas estão em cada etapa.', cands: 'Cada coluna é uma etapa. Arraste o cartão para mover a pessoa.', quest: 'Perguntas de triagem e testes, com correção automática.', ent: 'Entrevistas marcadas, já feitas e os horários que você liberou.', banco: 'Todos que já se candidataram, para chamar em vagas futuras.', relat: 'De onde vêm os candidatos, quanto tempo leva e onde o funil perde gente.', equipe: 'Quem tem acesso ao recrutamento e o que cada um pode fazer.', config: 'Dados da empresa, página de carreiras e mensagens padrão.' };
+const COR_ET = { inscrito: 'var(--e-inscrito)', triagem: 'var(--e-triagem)', teste: 'var(--e-teste)', entrevista: 'var(--e-entrevista)', aprovado: 'var(--e-aprovado)', reprovado: 'var(--e-reprovado)', desistiu: 'var(--e-desistiu)' };
+const corEt = k => COR_ET[k] || 'var(--e-entrevista)';
+const hueNome = s => { let h = 0; for (const ch of String(s || '')) h = (h * 31 + ch.charCodeAt(0)) % 360; return h; };
+const iniciaisN = s => String(s || '?').trim().split(/\s+/).filter(Boolean).slice(0, 2).map(p => p[0]).join('').toUpperCase();
+function funilHero(cont) {
+  const ks = ['inscrito', 'triagem', 'teste', 'entrevista', 'aprovado'], tot = ks.reduce((s, k) => s + (cont[k] || 0), 0);
+  return `<section class="panel"><div class="row" style="align-items:baseline"><h2 style="flex:1;margin:0">Funil de candidatos</h2><span class="hint">${tot} pessoa${tot === 1 ? '' : 's'} no processo</span></div>
+    <div class="funil" role="img" aria-label="Distribuição por etapa">${tot ? ks.map(k => (cont[k] ? `<i style="flex:${cont[k]};background:${corEt(k)}"></i>` : '')).join('') : '<i style="flex:1;background:var(--line2)"></i>'}</div>
+    <div class="funil-l">${ks.map(k => `<button data-fe="${k}" style="--c:${corEt(k)}"><b>${cont[k] || 0}</b><span>${ETAPA[k]}</span></button>`).join('')}</div></section>`;
+}
+function miniFunil(a) { const ks = ['inscrito', 'triagem', 'teste', 'entrevista', 'aprovado']; if (!a.length) return '<div class="mini-f" title="Nenhum candidato ainda"></div>'; return `<div class="mini-f" title="${ks.map(k => `${ETAPA[k]}: ${a.filter(x => etapaV(x) === k).length}`).join(', ')}">${ks.map(k => { const n = a.filter(x => etapaV(x) === k).length; return n ? `<i style="flex:${n};background:${corEt(k)}"></i>` : ''; }).join('')}</div>`; }
+document.addEventListener('click', e => {
+  const fe = e.target.closest && e.target.closest('[data-fe]'); if (fe) { S.vagaSel = ''; go('cands'); return; }
+  const mb = e.target.closest && e.target.closest('.mn-b'); $$('.mn-l').forEach(l => { if (!mb || l !== mb.nextElementSibling) { l.hidden = true; const b = l.previousElementSibling; if (b) b.setAttribute('aria-expanded', 'false'); } });
+  if (mb) { const l = mb.nextElementSibling; l.hidden = !l.hidden; mb.setAttribute('aria-expanded', String(!l.hidden)); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') $$('.mn-l').forEach(l => { l.hidden = true; }); });
 
 /* ---------- Início ---------- */
 if (iniciarFirebase('rs-recrutador')) auth.onAuthStateChanged(u => { if (S.criando) return; if (u) entrar(u); else { S.subs.forEach(f => f()); S.subs = []; S.me = null; telaLogin(S.avisoLogin); S.avisoLogin = null; } });
