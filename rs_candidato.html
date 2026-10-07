@@ -159,7 +159,7 @@ h2.sec-t{font-family:var(--f-disp);font-size:20px;font-weight:700;margin:22px 0 
 .cta-fixa .btn{flex:1 1 220px;justify-content:center;padding:13px 18px;font-size:15.5px}
 #bt-duv{bottom:20px}body:has(.cta-fixa) #bt-duv{bottom:150px!important}
 /* ----- logo ----- */
-.lg{display:inline-flex;align-items:center;gap:calc(10px * var(--s,1));line-height:1}
+.nxl{display:inline-flex;align-items:center;gap:calc(10px * var(--s,1));line-height:1}
 .lg-n{flex:0 0 auto;filter:drop-shadow(0 4px 10px rgba(16,60,200,.25))}
 .lg-t{display:flex;flex-direction:column;gap:calc(5px * var(--s,1))}
 .lg-l1{display:flex;align-items:center;gap:calc(10px * var(--s,1))}
@@ -171,7 +171,7 @@ h2.sec-t{font-family:var(--f-disp);font-size:20px;font-weight:700;margin:22px 0 
 .lg-rh{font-family:'Montserrat','Bricolage Grotesque',ui-sans-serif,system-ui,sans-serif;font-weight:700;font-size:calc(24px * var(--s,1))}
 .lg-sub{font-family:var(--f-txt);font-weight:500;font-size:calc(13px * var(--s,1));letter-spacing:.01em}
 .lg-claro .lg-sub{color:rgba(255,255,255,.9)}.lg-escuro .lg-sub{color:var(--ink2)}
-.topo .lg{--s:.62}.topo .lg span{opacity:1}.topo .lg-sub{display:none}.topo .in>div:first-child{display:flex;flex-direction:column;align-items:flex-start;gap:6px}.topo #emp-n{font-family:var(--f-disp);font-size:18px;font-weight:700;color:#fff;line-height:1.1}.sala .ctrl .btn.sec{color:#fff!important}.sala .ctrl .btn.sec:hover{background:#34406A}</style></head>
+.topo .nxl{--s:.62}.topo .nxl span{opacity:1}.topo .lg-sub{display:none}.topo .in>div:first-child{display:flex;flex-direction:column;align-items:flex-start;gap:6px}.topo #emp-n{font-family:var(--f-disp);font-size:18px;font-weight:700;color:#fff;line-height:1.1}.sala .ctrl .btn.sec{color:#fff!important}.sala .ctrl .btn.sec:hover{background:#34406A}</style></head>
 <body><div id="toasts"></div><div id="modal-root"></div><p style="padding:40px;text-align:center;color:#5F6B85">Carregando…</p>
 <script>/* =====================================================================
    NEXUM Recrutamento e Seleção — núcleo compartilhado (recrutador e candidato)
@@ -348,7 +348,7 @@ function marcaN(tam = 56) {
     <path d="M60 140c30-34 80-74 118-100" stroke="#8FD0FF" stroke-opacity=".55" stroke-width="5" stroke-linecap="round" fill="none"/></svg>`;
 }
 function logoNexum({ claro = true, sub = 'Recrutamento e Seleção', tam = 1 } = {}) {
-  return `<span class="lg ${claro ? 'lg-claro' : 'lg-escuro'}" style="--s:${tam}" role="img" aria-label="Nexum RH${sub ? ', ' + sub : ''}">${marcaN(Math.round(66 * tam))}<span class="lg-t"><span class="lg-l1"><span class="lg-w">NE<span class="lg-x">X</span>UM</span><i class="lg-bar"></i><span class="lg-rh">RH</span></span>${sub ? `<span class="lg-sub">${sub}</span>` : ''}</span></span>`;
+  return `<span class="nxl ${claro ? 'lg-claro' : 'lg-escuro'}" style="--s:${tam}" role="img" aria-label="Nexum RH${sub ? ', ' + sub : ''}">${marcaN(Math.round(66 * tam))}<span class="lg-t"><span class="lg-l1"><span class="lg-w">NE<span class="lg-x">X</span>UM</span><i class="lg-bar"></i><span class="lg-rh">RH</span></span>${sub ? `<span class="lg-sub">${sub}</span>` : ''}</span></span>`;
 }
 
 /* =====================================================================
