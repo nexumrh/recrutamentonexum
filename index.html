@@ -687,7 +687,7 @@ function shell() {
   $$('.side .nav button').forEach(b => b.onclick = () => go(b.dataset.v)); $('#b-sair').onclick = () => auth.signOut(); go(S.view);
 }
 function go(v) { S.view = v; $$('.side .nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); render(); window.scrollTo(0, 0); }
-function render() { const el = $('#view'); if (!el) return; regEtapas(); $('#t-view').textContent = (NAV.find(n => n[0] === S.view) || [, ''])[1]; { const sb = $('#t-sub'); if (sb) sb.textContent = SUBT[S.view] || ''; } ({ painel: e => { vPainel(e); painelSLA(e); }, vagas: vVagas, cands: e => { vCands(e); extrasCands3(e); }, quest: vQuest, ent: e => { vEnt(e); if (ehEditor() && !$('#de-b', e)) { e.insertAdjacentHTML('afterbegin', '<div class="row" style="margin-bottom:12px"><span class="sp"></span><button class="btn" id="de-b">Dia de entrevistas</button></div>'); $('#de-b', e).onclick = diaEntrevistas; } }, banco: vBanco, relat: e => { vRelat(e); painelExperiencia(e); }, equipe: vEquipe, config: vConfig })[S.view](el); }
+function render() { const el = $('#view'); if (!el) return; regEtapas(); $('#t-view').textContent = (NAV.find(n => n[0] === S.view) || [, ''])[1]; { const sb = $('#t-sub'); if (sb) sb.textContent = SUBT[S.view] || ''; } ({ painel: e => { vPainel(e); painelSLA(e); }, vagas: vVagas, cands: e => { vCands(e); extrasCands3(e); }, quest: vQuest, ent: e => { vEnt(e); if (ehEditor() && !$('#de-b', e)) { e.insertAdjacentHTML('afterbegin', '<div class="row" style="margin-bottom:12px"><span class="sp"></span><button class="btn" id="de-b">Dia de entrevistas</button></div>'); $('#de-b', e).onclick = diaEntrevistas; } }, banco: vBanco, relat: e => { vRelat(e); painelExperiencia(e); painelGraficos(e); }, equipe: vEquipe, config: vConfig })[S.view](el); }
 /* ---------- Painel ---------- */
 function vPainel(el) {
   const ap = S.d.apps, ativos = ap.filter(a => !final(a)), hj = iso(), mes = hj.slice(0, 7), cont = {}; ativos.forEach(a => cont[a.etapa] = (cont[a.etapa] || 0) + 1); cont.resultado = ap.filter(a => final(a)).length;
@@ -858,7 +858,7 @@ function decidir(a, res) {
 const CRITERIOS = ['Comunicação', 'Experiência para a função', 'Postura e atendimento', 'Disponibilidade', 'Motivação', 'Encaixe com a equipe'];
 function formScorecard(ent, av) {
   const rot = questDe(ent.roteiroId);
-  return `${rot ? `<h3 style="margin-bottom:8px">${esc(rot.titulo)}</h3><p class="hint" style="margin-top:0">Registre a resposta do candidato a cada pergunta.</p>${rot.perguntas.map((q, i) => campoPergunta(q, i, (av.resp || {})[q.id], 'r')).join('')}` : '<p class="hint">Entrevista sem roteiro de perguntas.</p>'}
+  return `<button type="button" class="btn sec" data-rot-ent="${ent.id}" style="width:100%;margin-bottom:12px">Roteiro de perguntas profissionais</button>${rot ? `<h3 style="margin-bottom:8px">${esc(rot.titulo)}</h3><p class="hint" style="margin-top:0">Registre a resposta do candidato a cada pergunta.</p>${rot.perguntas.map((q, i) => campoPergunta(q, i, (av.resp || {})[q.id], 'r')).join('')}` : '<p class="hint">Entrevista sem roteiro de perguntas.</p>'}
     <h3 style="margin:16px 0 8px">Critérios (1 a 5)</h3>${CRITERIOS.map((c, i) => `<div class="fld"><span class="lbl">${c}</span><div class="escala">${[1, 2, 3, 4, 5].map(k => `<label><input type="radio" name="cr${i}" value="${k}" ${(av.criterios || [])[i] === k ? 'checked' : ''}><span>${k}</span></label>`).join('')}</div></div>`).join('')}
     <div class="fld"><label for="sc-o">Observações</label><textarea class="inp" id="sc-o">${esc(av.obs || '')}</textarea></div><div class="fld"><label for="sc-r">Recomendação</label><select class="inp" id="sc-r">${opts([['aprovar', 'Aprovar'], ['duvida', 'Em dúvida'], ['reprovar', 'Reprovar']], av.recomendacao || 'duvida')}</select></div><button class="btn" id="sc-ok" style="width:100%">Salvar avaliação</button>`;
 }
@@ -943,7 +943,7 @@ function vEnt(el, aba = S.entAba || 'prox') {
   el.innerHTML = `<div class="tabs"><button class="${aba === 'prox' ? 'on' : ''}" data-a="prox">Próximas</button><button class="${aba === 'ant' ? 'on' : ''}" data-a="ant">Anteriores</button><button data-a="liv">Horários livres</button></div>
     ${dias.length ? dias.map(d => `<section class="panel"><h2 style="margin-bottom:6px">${new Date(d + 'T12:00').toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</h2><ul class="list">${l.filter(e => e.inicio.slice(0, 10) === d).map(e => { const ab = new Date(e.inicio).getTime() - agoraMs < 30 * 60000, a = S.d.apps.find(x => x.id === e.appId), conf = a && (a.confirmacoes || {})[e.id];
       return `<li><span class="av" style="--h:${hueNome(e.candNome)}" aria-hidden="true">${esc(iniciaisN(e.candNome))}</span><div class="t"><div><b>${fhm(e.inicio)}</b> · ${esc(e.candNome)} · ${esc(e.vagaTitulo)}</div><div>${e.tipo === 'video' ? 'Vídeo' : e.tipo === 'presencial' ? `Presencial${e.local ? `, ${esc(e.local)}` : ''}` : 'Telefone'} · ${e.duracao} min${conf ? ' · candidato confirmou' : ''}${e.status !== 'agendada' ? ` · ${{ realizada: 'realizada', falta: 'não compareceu', cancelada: 'cancelada' }[e.status]}` : ''}</div></div>
-        ${e.tipo === 'video' && e.status === 'agendada' ? `<button class="btn sm" data-sala="${e.id}" ${ab ? '' : 'title="A sala abre 30 minutos antes"'}>Entrar</button>` : ''}<button class="btn sec sm" data-av="${e.id}">Avaliar</button><button class="btn ghost sm" data-ab="${e.appId}">Ficha</button></li>`; }).join('')}</ul></section>`).join('')
+        ${e.tipo === 'video' && e.status === 'agendada' ? `<button class="btn sm" data-sala="${e.id}" ${ab ? '' : 'title="A sala abre 30 minutos antes"'}>Entrar</button>` : ''}<button class="btn sec sm" data-rot="${e.id}">Roteiro</button><button class="btn sec sm" data-av="${e.id}">Avaliar</button><button class="btn ghost sm" data-ab="${e.appId}">Ficha</button></li>`; }).join('')}</ul></section>`).join('')
       : `<div class="panel empty"><b>${aba === 'prox' ? 'Nenhuma entrevista marcada' : 'Nenhuma entrevista anterior'}</b>${aba === 'prox' ? 'Agende pela ficha do candidato, em Candidatos.' : ''}</div>`}`;
   $$('.tabs button', el).forEach(b => b.onclick = () => vEnt(el, b.dataset.a)); $$('[data-sala]', el).forEach(b => b.onclick = () => salaHost(S.d.ent.find(e => e.id === b.dataset.sala)));
   $$('[data-av]', el).forEach(b => b.onclick = () => scorecard(S.d.ent.find(e => e.id === b.dataset.av))); $$('[data-ab]', el).forEach(b => b.onclick = () => abrirCand(b.dataset.ab, 'ent'));
@@ -1305,6 +1305,13 @@ function exportarAdmissao(a) {
 }
 /* ---------- Ficha: referências, proposta e botões novos ---------- */
 function ligarFicha3(m, a, pv) {
+  { const dg = v => String(v || '').replace(/\D/g, ''), pe = a.perfil || {}, em = String(pe.email || '').toLowerCase(), tel = dg(pe.telefone);
+    const outros = S.d.apps.filter(x => x.id !== a.id && !x.anonimizado && ((a.candUid && x.candUid === a.candUid) || (em && String((x.perfil || {}).email || '').toLowerCase() === em) || (tel.length >= 10 && dg((x.perfil || {}).telefone) === tel)))
+      .sort((x, y) => (y.atualizadoEm || y.criadoEm || '').localeCompare(x.atualizadoEm || x.criadoEm || ''));
+    const b = $('.modal-b', m);
+    if (outros.length && b && !$('#cand-rep', m)) b.insertAdjacentHTML('afterbegin', `<div id="cand-rep" style="border:1px solid #F3C98B;background:#FFF7EA;border-radius:12px;padding:12px 14px;margin-bottom:14px"><b>Esta pessoa já participou de ${outros.length} processo${outros.length > 1 ? 's' : ''}</b>
+      <ul style="list-style:none;margin:8px 0 0;padding:0">${outros.map(x => `<li style="display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #F6DDB5"><span style="flex:1"><b style="font-weight:600">${esc(x.vagaTitulo || (vagaDe(x.vagaId) || {}).titulo || 'Vaga')}</b><span class="hint" style="display:block">${esc(ETAPA[etapaV(x)] || etapaV(x) || '')}${x.decisao && x.decisao.motivo ? ': ' + esc(x.decisao.motivo) : ''} · ${new Date(x.atualizadoEm || x.criadoEm).toLocaleDateString('pt-BR')}</span></span><button type="button" class="btn ghost sm" data-rep="${x.id}">Abrir</button></li>`).join('')}</ul></div>`);
+    $$('[data-rep]', m).forEach(x => x.onclick = () => abrirCand(x.dataset.rep)); }
   { const h = $('.modal-h h3', m); if (h && !h.querySelector('.av')) h.insertAdjacentHTML('afterbegin', `<span class="av" style="--h:${hueNome(nomeVis(a))}" aria-hidden="true">${esc(iniciaisN(nomeVis(a)))}</span>`); }
   $$('[data-rf]', m).forEach(b => b.onclick = () => checarReferencia(a, +b.dataset.rf)); painelProposta(m, a);
   const f = $('.modal-f', m); if (f && ehEditor() && etapaV(a) === 'aprovado') f.insertAdjacentHTML('afterbegin', `<button class="btn ${a.proposta ? 'sec' : ''}" id="cd-pp">${a.proposta ? 'Reenviar proposta' : 'Enviar carta-proposta'}</button>`);
@@ -1547,6 +1554,126 @@ function suporteIniciar() {
 }
 function suporteRemover() { ['sup-b', 'sup-p'].forEach(id => { const x = document.getElementById(id); if (x) x.remove(); }); if (SUP.unsubL) { SUP.unsubL(); SUP.unsubL = null; } if (SUP.unsub) { SUP.unsub(); SUP.unsub = null; } SUP.doc = null; SUP.lista = []; }
 setInterval(() => { try { if (S.me && S.eid && !document.getElementById('sup-b') && !document.querySelector('.rz-tela')) suporteIniciar(); } catch (e) { } }, 1500);
+
+/* =====================================================================
+   ROTEIRO PROFISSIONAL DE ENTREVISTA: perguntas, anotações do recrutador e PDF
+   As anotações ficam em priv/{candidatura} (só a equipe lê; o candidato não).
+   ===================================================================== */
+const ROT_PRO = [
+  ['abertura', 'Abertura e apresentação', 'Deixe o candidato à vontade antes de aprofundar.', [
+    ['Conte um pouco sobre você e sobre a sua trajetória profissional até aqui.', 'Clareza, objetividade e uma linha do tempo coerente.'],
+    ['O que você sabe sobre a nossa empresa e por que se candidatou a esta vaga?', 'Se pesquisou sobre a empresa e se o interesse é genuíno.'],
+    ['O que você espera encontrar no seu próximo trabalho?', 'Se as expectativas combinam com o que a vaga oferece.']]],
+  ['trajetoria', 'Trajetória e motivação', 'Perguntas pessoais permitidas: trajetória, objetivos e motivação.', [
+    ['Qual experiência profissional deixa você mais orgulhoso? Por quê?', 'O que a pessoa valoriza e como mede o próprio sucesso.'],
+    ['Por que você saiu, ou quer sair, do seu emprego atual ou do último?', 'Postura ao falar de ex-empregadores; motivos coerentes.'],
+    ['Onde você se vê profissionalmente daqui a dois anos?', 'Ambição realista e se há espaço para isso na empresa.'],
+    ['O que faz você dar o seu melhor no trabalho?', 'Motivadores: reconhecimento, comissão, aprendizado, equipe.'],
+    ['O que você aprendeu de novo nos últimos meses, no trabalho ou fora dele?', 'Curiosidade e disposição para aprender.']]],
+  ['comportamental', 'Comportamentais (método STAR)', 'Peça sempre um caso real: a situação, a tarefa, o que a pessoa fez e o resultado.', [
+    ['Conte uma situação em que você atendeu um cliente muito insatisfeito. O que você fez e qual foi o resultado?', 'Empatia, calma e foco em resolver, e não em culpar.'],
+    ['Descreva uma vez em que você bateu uma meta difícil. Como você se organizou?', 'Planejamento, persistência e números concretos.'],
+    ['Conte sobre um erro que você cometeu no trabalho e o que fez para corrigir.', 'Assume a responsabilidade? Aprendeu algo?'],
+    ['Dê um exemplo de quando precisou trabalhar com um colega com quem não se dava bem.', 'Maturidade e capacidade de colaborar mesmo assim.'],
+    ['Conte uma situação em que você teve que aprender algo novo muito rápido.', 'Adaptabilidade e iniciativa.'],
+    ['Descreva uma vez em que você foi além do que era pedido.', 'Proatividade e senso de dono.']]],
+  ['emocional', 'Inteligência emocional e postura', 'Perguntas de entrevista sobre comportamento. Testes psicológicos só podem ser aplicados por psicólogos.', [
+    ['Como você reage quando recebe uma crítica do seu gestor? Dê um exemplo.', 'Abertura para feedback, sem defensividade.'],
+    ['O que você faz quando está sob pressão, com muitas tarefas ao mesmo tempo?', 'Priorização e controle emocional.'],
+    ['Conte uma situação em que você perdeu a paciência. O que aprendeu com ela?', 'Autoconhecimento e honestidade.'],
+    ['Como você lida com um dia em que nada dá certo?', 'Resiliência e capacidade de se recuperar.'],
+    ['O que costuma desmotivar você no trabalho, e o que você faz quando isso acontece?', 'Se tem estratégias próprias para se manter bem.'],
+    ['Como você se descreveria em três palavras? E como os seus colegas descreveriam você?', 'Coerência entre a autoimagem e os exemplos dados.']]],
+  ['situacional', 'Situacionais', 'Situações hipotéticas do dia a dia da loja.', [
+    ['Um cliente quer devolver um produto fora do prazo e está alterado. O que você faz?', 'Respeito às regras com bom atendimento; quando chamar o gestor.'],
+    ['Você percebe um colega fazendo algo errado com o caixa ou com o estoque. Como você age?', 'Ética e coragem para agir do jeito certo.'],
+    ['A loja está cheia e um cliente reclama da demora. Como você resolve?', 'Comunicação e organização sob pressão.'],
+    ['O seu gestor pede algo com que você não concorda. O que você faz?', 'Expõe a opinião com respeito e depois colabora.'],
+    ['Faltam dois dias para o fim do mês e você está longe da meta. Qual é o seu plano?', 'Ação concreta, sem desistir nem forçar o cliente.']]],
+  ['vaga', 'Específicas da vaga', 'Perguntas ligadas ao dia a dia do cargo.', null],
+  ['encerramento', 'Encerramento', 'Feche a entrevista explicando os próximos passos.', [
+    ['Qual é a sua disponibilidade de horário, inclusive em fins de semana e feriados?', 'Compatibilidade com a escala da loja.'],
+    ['Qual é a sua pretensão salarial?', 'Se está dentro da faixa da vaga.'],
+    ['Se for aprovado, quando poderia começar?', 'Aviso prévio em outro emprego ou disponibilidade imediata.'],
+    ['Você tem alguma pergunta para nós?', 'Perguntas boas mostram interesse e preparo.']]]
+];
+const ROT_VAGA = {
+  vendas: [['Como você apresenta um celular para um cliente que ainda não sabe o que quer?', 'Faz perguntas antes de oferecer; ouve mais do que fala.'], ['Como você oferece um acessório ou uma garantia sem ser insistente?', 'Venda adicional com naturalidade, mostrando o benefício.'], ['Faça uma simulação: me venda um celular.', 'Abordagem, descoberta da necessidade, argumento e fechamento.'], ['Como você conquista um cliente que só está pesquisando preço?', 'Gera valor além do preço e deixa a porta aberta.']],
+  tecnico: [['Como você diagnostica um aparelho que não liga?', 'Raciocínio em etapas, do mais simples ao mais complexo.'], ['Explique, como faria para um cliente leigo, por que a troca de tela tem esse preço.', 'Comunicação clara e sem jargão.'], ['Como você organiza vários consertos com prazos diferentes?', 'Organização, controle e aviso ao cliente.'], ['O que você faz se perceber que errou num reparo já entregue?', 'Honestidade e responsabilidade com o cliente.']],
+  caixa: [['Como você confere o caixa no fim do dia?', 'Método e atenção aos detalhes.'], ['O que você faz se o caixa fechar com diferença?', 'Transparência: comunica e investiga, sem esconder.'], ['Como você lida com uma fila grande e um cliente apressado?', 'Agilidade com cordialidade.'], ['Como você evita erros com troco, cartão e PIX?', 'Conferência e cuidado com fraudes.']],
+  geral: [['Quais habilidades suas serão mais úteis nesta função?', 'Se entende o que a função exige.'], ['Que parte desta função você acha que será mais desafiadora?', 'Autoconhecimento e realismo.'], ['Como você organiza o seu dia de trabalho?', 'Rotina, prioridades e autonomia.']]
+};
+const ROT_NOTA = ['', 'Fraco', 'Abaixo do esperado', 'Adequado', 'Bom', 'Excelente'], ROT_REC = { '': 'Ainda não definido', sim: 'Recomendo a contratação', ressalva: 'Recomendo com ressalvas', nao: 'Não recomendo' };
+const rotTipoVaga = t => { t = String(t || '').toLowerCase(); return /vend|consult|comerc|atend/.test(t) ? 'vendas' : /t[eé]cn|assist|repar|manut/.test(t) ? 'tecnico' : /caix|operador de caixa|financ/.test(t) ? 'caixa' : 'geral'; };
+function rotBlocos(ent) { return ROT_PRO.map(([id, tit, intro, qs]) => [id, tit, intro, (qs || ROT_VAGA[rotTipoVaga(ent.vagaTitulo)]).map((q, i) => ({ id: `${id}${i}`, p: q[0], o: q[1] }))]); }
+const rotDados = ent => (((S.d.priv || []).find(p => p.id === ent.appId) || {}).roteiros || {})[ent.id] || {};
+let _h2pR = null;
+function carregarH2P() { if (window.html2pdf) return Promise.resolve(); if (_h2pR) return _h2pR; _h2pR = new Promise((ok, erro) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'; s.onload = ok; s.onerror = () => { _h2pR = null; erro(new Error('Sem conexão para gerar o PDF.')); }; document.head.appendChild(s); }); return _h2pR; }
+async function baixarPDF(nome, html) {
+  const ov = document.createElement('div'); ov.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:#fff;display:flex;align-items:center;justify-content:center;font:600 16px Arial,sans-serif;color:#0B1E4A'; ov.textContent = 'Gerando o PDF…';
+  try { await carregarH2P(); document.body.appendChild(ov); const box = document.createElement('div'); box.style.cssText = 'width:700px;background:#fff;padding:0;position:relative'; box.innerHTML = html; document.body.prepend(box); const sy = window.scrollY; window.scrollTo(0, 0); await new Promise(r => setTimeout(r, 80));
+    await window.html2pdf().set({ margin: [10, 10, 12, 10], filename: String(nome).replace(/[\\/:*?"<>|]+/g, '-') + '.pdf', image: { type: 'jpeg', quality: .97 }, html2canvas: { scale: 2, backgroundColor: '#ffffff', scrollX: 0, scrollY: 0 }, jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }, pagebreak: { mode: ['css', 'legacy'], avoid: '.rp-q' } }).from(box).save();
+    box.remove(); ov.remove(); window.scrollTo(0, sy); } catch (e) { ov.remove(); toast(e.message || 'Não foi possível gerar o PDF.', true); }
+}
+function docRoteiro(ent, d) {
+  const bl = rotBlocos(ent), r = d.respostas || {}, n = d.notas || {}, x = (S.d.users || []).filter(u => (ent.entrevistadores || []).includes(u.id)).map(u => u.nome).join(', ');
+  const logo = '<svg width="30" height="27" viewBox="20 20 580 520" aria-hidden="true"><path d="M30 528V196c0-30 18-48 46-50L226 260v136z" fill="#5AA2FF"/><path d="M404 124 578 30v330H404z" fill="#3B82F6"/><path d="M36 168c8-32 42-56 78-82 26-19 50-44 74-54 22-9 44-4 60 12l316 290c16 15 16 32 2 46l-96 90c-16 15-38 15-54 0L104 166c-18-16-48-20-68 2z" fill="#9CC8FF"/></svg>';
+  return `<style>.rp{font-family:Arial,Helvetica,sans-serif;color:#111827;font-size:11px;line-height:1.4}.rp .tp{display:flex;align-items:center;gap:10px;background:#0B1E4A;color:#fff;padding:11px 14px;border-radius:6px 6px 0 0}.rp .tp b{font-size:15px}.rp .tp .t{flex:1;text-align:right}.rp .tp .t b{display:block;font-size:13px}.rp .tp .t span{font-size:10px;opacity:.85}
+    .rp table{width:100%;border-collapse:collapse}.rp td{border:1px solid #9FB3D3;padding:5px 8px;vertical-align:top}.rp td small{display:block;font-size:8.5px;color:#4B5B7A;text-transform:uppercase;letter-spacing:.03em}.rp td b{font-size:11.5px}
+    .rp .sec{background:#DCE6F5;border:1px solid #9FB3D3;padding:5px 8px;font-weight:700;font-size:10.5px;color:#0B1E4A;margin-top:12px;display:flex;justify-content:space-between}.rp .rp-q{border:1px solid #9FB3D3;border-top:0;padding:6px 8px;page-break-inside:avoid}.rp .rp-q .p{font-weight:700}.rp .rp-q .r{margin-top:3px;white-space:pre-wrap;color:#1F2A44}.rp .rp-q .v{color:#8A93AB;font-style:italic}
+    .rp .fim{border:1px solid #0B1E4A;border-radius:6px;padding:8px 10px;margin-top:12px;page-break-inside:avoid}.rp .rod{display:flex;justify-content:space-between;margin-top:14px;padding-top:6px;border-top:2px solid #0B1E4A;font-size:9px;color:#4B5B7A}</style>
+  <div class="rp"><div class="tp">${logo}<b>NEXUM</b><span style="opacity:.75;font-weight:600">Recrutamento e Seleção</span><span class="t"><b>ROTEIRO E REGISTRO DE ENTREVISTA</b><span>Documento interno e confidencial</span></span></div>
+  <table><tr><td colspan="2"><small>Candidato</small><b>${esc(ent.candNome || '')}</b></td><td colspan="2"><small>Vaga</small><b>${esc(ent.vagaTitulo || '')}</b></td></tr><tr><td><small>Data</small><b>${ent.inicio ? new Date(ent.inicio).toLocaleString('pt-BR').slice(0, 17) : ''}</b></td><td><small>Formato</small><b>${{ video: 'Vídeo no sistema', presencial: 'Presencial', telefone: 'Telefone', meet: 'Google Meet' }[ent.tipo] || esc(ent.tipo || '')}</b></td><td colspan="2"><small>Entrevistador(es)</small><b>${esc(x || (S.me && S.me.nome) || '')}</b></td></tr></table>
+  ${bl.map(([id, tit, , qs]) => `<div class="sec"><span>${tit}</span><span>${n[id] ? `Nota ${n[id]} de 5 (${ROT_NOTA[n[id]]})` : 'Sem nota'}</span></div>${qs.map(q => `<div class="rp-q"><div class="p">${esc(q.p)}</div>${r[q.id] ? `<div class="r">${esc(r[q.id])}</div>` : '<div class="r v">Sem anotação.</div>'}</div>`).join('')}`).join('')}
+  ${(d.extras || []).length ? `<div class="sec"><span>Perguntas adicionais</span><span></span></div>${d.extras.map(e => `<div class="rp-q"><div class="p">${esc(e.p)}</div><div class="r">${esc(e.r || '') || '<span class="v">Sem anotação.</span>'}</div></div>`).join('')}` : ''}
+  <div class="fim"><b>Parecer do entrevistador</b><div style="white-space:pre-wrap;margin-top:4px">${esc(d.parecer || '') || '<span class="v" style="color:#8A93AB">Sem parecer.</span>'}</div><div style="margin-top:6px"><b>Recomendação:</b> ${ROT_REC[d.rec || '']}</div></div>
+  <div class="rod"><span>Emitido pelo NEXUM Recrutamento e Seleção em ${new Date().toLocaleString('pt-BR').slice(0, 17)}${d.por ? `, registrado por ${esc(d.por)}` : ''}</span><span>Uso exclusivo da equipe de recrutamento</span></div></div>`;
+}
+function roteiroEntrevista(entId) {
+  const ent = S.d.ent.find(e => e.id === entId); if (!ent) return toast('Entrevista não encontrada.', true);
+  const bl = rotBlocos(ent), d = JSON.parse(JSON.stringify(rotDados(ent))); d.respostas = d.respostas || {}; d.notas = d.notas || {}; d.extras = d.extras || []; let tm = null, sujo = false;
+  const salvar = async silencio => { clearTimeout(tm); if (!sujo && silencio) return; d.por = S.me.nome; d.em = new Date().toISOString();
+    try { await sub(S.eid, 'priv').doc(ent.appId).set({ roteiros: { [ent.id]: d } }, { merge: true }); sujo = false; const st = $('#rp-st'); if (st) st.textContent = 'Salvo às ' + new Date().toLocaleTimeString('pt-BR').slice(0, 5); if (!silencio) toast('Roteiro salvo.'); } catch (e) { toast('Não foi possível salvar: ' + msgErro(e), true); } };
+  const agenda = () => { sujo = true; const st = $('#rp-st'); if (st) st.textContent = 'Salvando…'; clearTimeout(tm); tm = setTimeout(() => salvar(true), 900); };
+  modal(`Roteiro: ${esc(ent.candNome)}`, `<p class="hint" style="margin-top:0">${esc(ent.vagaTitulo)} · ${ent.inicio ? new Date(ent.inicio).toLocaleString('pt-BR').slice(0, 17) : ''}. As anotações são salvas sozinhas e só a equipe de recrutamento vê; o candidato não tem acesso.</p>
+    <div style="border:1px solid #F3C98B;background:#FFF7EA;border-radius:10px;padding:10px 12px;font-size:13.5px;margin-bottom:12px"><b>Não pergunte</b> sobre gravidez ou planos de ter filhos, estado civil, religião, saúde, orientação sexual, idade, política ou sindicato. Essas perguntas são proibidas por lei (Lei 9.029/95) e podem gerar processo por discriminação.</div>
+    <label class="row" style="gap:6px;margin-bottom:8px"><input type="checkbox" id="rp-dica" checked> Mostrar o que observar em cada resposta</label>
+    ${bl.map(([id, tit, intro, qs]) => `<details class="rp-bl" ${id === 'abertura' ? 'open' : ''} style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff"><summary style="cursor:pointer;padding:12px 14px;font-weight:700;display:flex;gap:8px;align-items:center"><span style="flex:1">${tit} <span class="hint" style="font-weight:500">(${qs.length})</span></span><span class="pill" data-rp-nb="${id}">${d.notas[id] ? 'Nota ' + d.notas[id] : 'Sem nota'}</span></summary>
+      <div style="padding:0 14px 12px"><p class="hint" style="margin:0 0 10px">${intro}</p>${qs.map((q, i) => `<div style="margin-bottom:12px"><div style="font-weight:600">${i + 1}. ${esc(q.p)}</div><div class="hint rp-o" style="margin:2px 0 6px;font-size:13px">O que observar: ${esc(q.o)}</div><textarea class="inp" rows="2" data-rp-r="${q.id}" placeholder="Anote a resposta do candidato">${esc(d.respostas[q.id] || '')}</textarea></div>`).join('')}
+      <div class="row" style="gap:8px;align-items:center"><span class="hint">Nota do bloco</span><select class="inp" data-rp-n="${id}" style="width:auto">${ROT_NOTA.map((t, k) => `<option value="${k || ''}" ${String(d.notas[id] || '') === String(k || '') ? 'selected' : ''}>${k ? k + ' · ' + t : 'Sem nota'}</option>`).join('')}</select></div></div></details>`).join('')}
+    <details class="rp-bl" style="border:1px solid var(--line);border-radius:12px;margin-bottom:10px;background:#fff"><summary style="cursor:pointer;padding:12px 14px;font-weight:700">Perguntas adicionais</summary><div style="padding:0 14px 12px" id="rp-ex"></div></details>
+    <div class="fld"><label for="rp-par">Parecer do entrevistador</label><textarea class="inp" id="rp-par" rows="3" placeholder="Pontos fortes, pontos de atenção e conclusão">${esc(d.parecer || '')}</textarea></div>
+    <div class="fld"><label for="rp-rec">Recomendação</label><select class="inp" id="rp-rec">${opts(Object.entries(ROT_REC), d.rec || '')}</select></div>`,
+    { size: 'lg', foot: '<span class="hint" id="rp-st" style="flex:1">' + (d.em ? 'Salvo em ' + new Date(d.em).toLocaleString('pt-BR').slice(0, 17) : 'Ainda não salvo') + '</span><button class="btn sec" id="rp-pdf">Baixar PDF</button><button class="btn" id="rp-ok">Salvar</button>', onMount: m => {
+      const ex = () => { $('#rp-ex', m).innerHTML = d.extras.map((e, i) => `<div style="margin-bottom:10px"><input class="inp" data-rp-ep="${i}" value="${esc(e.p)}" placeholder="Pergunta" style="margin-bottom:6px;font-weight:600"><textarea class="inp" rows="2" data-rp-er="${i}" placeholder="Resposta">${esc(e.r || '')}</textarea></div>`).join('') + '<button type="button" class="btn ghost sm" id="rp-add">Acrescentar pergunta</button>'; $('#rp-add', m).onclick = () => { d.extras.push({ p: '', r: '' }); ex(); agenda(); }; };
+      ex();
+      m.addEventListener('input', e => { const t = e.target;
+        if (t.dataset.rpR) d.respostas[t.dataset.rpR] = t.value; else if (t.dataset.rpEp) d.extras[+t.dataset.rpEp].p = t.value; else if (t.dataset.rpEr) d.extras[+t.dataset.rpEr].r = t.value; else if (t.id === 'rp-par') d.parecer = t.value; else return; agenda(); });
+      m.addEventListener('change', e => { const t = e.target;
+        if (t.dataset.rpN) { d.notas[t.dataset.rpN] = +t.value || 0; const p = $(`[data-rp-nb="${t.dataset.rpN}"]`, m); if (p) p.textContent = t.value ? 'Nota ' + t.value : 'Sem nota'; agenda(); }
+        else if (t.id === 'rp-rec') { d.rec = t.value; agenda(); } else if (t.id === 'rp-dica') $$('.rp-o', m).forEach(o => o.style.display = t.checked ? '' : 'none'); });
+      $('#rp-ok', m).onclick = () => { sujo = true; salvar(false); };
+      $('#rp-pdf', m).onclick = () => { if (sujo) salvar(true); baixarPDF(`Entrevista - ${ent.candNome} - ${ent.vagaTitulo}`, docRoteiro(ent, d)); };
+    } });
+}
+document.addEventListener('click', ev => { const b = ev.target.closest && ev.target.closest('[data-rot],[data-rot-ent]'); if (!b) return; ev.preventDefault(); roteiroEntrevista(b.dataset.rot || b.dataset.rotEnt); });
+
+/* ---------- Relatórios com gráficos: funil, funil por vaga, origem dos contratados e tempos ---------- */
+function painelGraficos(el) {
+  if ($('#gr-p', el)) return; const ap = S.d.apps.filter(a => !a.anonimizado || a.etapa), E = ETAPAS.map(([k, t]) => ({ k, t, n: ap.filter(a => etapaV(a) === k).length }));
+  if (!ap.length) return; const max = Math.max(...E.map(e => e.n), 1), cor = k => `var(--e-${k})`;
+  const vagas = S.d.vagas.map(v => ({ v, l: ap.filter(a => a.vagaId === v.id) })).filter(x => x.l.length).sort((a, b) => b.l.length - a.l.length).slice(0, 8);
+  const orig = {}; ap.forEach(a => { const o = a.origem || 'Não informado'; orig[o] = orig[o] || { i: 0, c: 0 }; orig[o].i++; if (etapaV(a) === 'aprovado') orig[o].c++; }); const O = Object.entries(orig).sort((a, b) => b[1].i - a[1].i).slice(0, 8), oMax = Math.max(...O.map(([, x]) => x.i), 1);
+  const aprov = ap.filter(a => etapaV(a) === 'aprovado' && a.decisao && a.decisao.em), tAprov = aprov.length ? Math.round(aprov.reduce((s, a) => s + Math.max(0, diffD(new Date(a.criadoEm), new Date(a.decisao.em))), 0) / aprov.length) : null;
+  const parado = ['inscrito', 'triagem', 'teste', 'entrevista'].map(k => { const l = ap.filter(a => etapaV(a) === k); return { k, t: (ETAPAS.find(x => x[0] === k) || [])[1], d: l.length ? Math.round(l.reduce((s, a) => s + Math.max(0, diffD(new Date(a.atualizadoEm || a.criadoEm), new Date())), 0) / l.length) : null, n: l.length }; }), pMax = Math.max(...parado.map(p => p.d || 0), 1);
+  const barra = (rot, n, mx, c, extra = '') => `<div style="display:grid;grid-template-columns:130px 1fr 44px;gap:10px;align-items:center;margin:6px 0"><span style="font-size:13.5px">${rot}</span><span style="height:14px;border-radius:7px;background:#EEF1F7;overflow:hidden"><i style="display:block;height:100%;width:${Math.round(n / mx * 100)}%;background:${c};border-radius:7px"></i></span><b style="font-size:13.5px;text-align:right">${n}${extra}</b></div>`;
+  el.insertAdjacentHTML('afterbegin', `<section id="gr-p" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;margin-bottom:16px">
+    <div class="panel" style="margin:0"><h2 style="margin-bottom:8px">Funil geral</h2>${E.map(e => barra(e.t, e.n, max, cor(e.k))).join('')}</div>
+    <div class="panel" style="margin:0"><h2 style="margin-bottom:8px">Funil por vaga</h2>${vagas.map(({ v, l }) => `<div style="margin:8px 0"><div style="display:flex;justify-content:space-between;font-size:13.5px"><span>${esc(v.titulo)}</span><b>${l.length}</b></div><div style="display:flex;height:14px;border-radius:7px;overflow:hidden;background:#EEF1F7;margin-top:4px">${ETAPAS.map(([k, t]) => { const n = l.filter(a => etapaV(a) === k).length; return n ? `<i title="${t}: ${n}" style="display:block;flex:${n};background:${cor(k)}"></i>` : ''; }).join('')}</div></div>`).join('')}
+      <div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:10px;font-size:12px;color:#5B6485">${ETAPAS.map(([k, t]) => `<span style="display:inline-flex;align-items:center;gap:5px"><i style="width:9px;height:9px;border-radius:3px;background:${cor(k)}"></i>${t}</span>`).join('')}</div></div>
+    <div class="panel" style="margin:0"><h2 style="margin-bottom:4px">De onde vêm os contratados</h2><p class="hint" style="margin:0 0 6px">Inscritos (azul-claro) e aprovados (verde) por origem.</p>${O.map(([o, x]) => `<div style="display:grid;grid-template-columns:130px 1fr 70px;gap:10px;align-items:center;margin:7px 0"><span style="font-size:13.5px">${esc(o)}</span><span style="position:relative;height:14px;border-radius:7px;background:#EEF1F7;overflow:hidden"><i style="position:absolute;inset:0 auto 0 0;width:${Math.round(x.i / oMax * 100)}%;background:#B9C7EE;border-radius:7px"></i><i style="position:absolute;inset:0 auto 0 0;width:${Math.round(x.c / oMax * 100)}%;background:var(--e-aprovado);border-radius:7px"></i></span><span style="font-size:13px;text-align:right"><b>${x.c}</b> de ${x.i}</span></div>`).join('')}</div>
+    <div class="panel" style="margin:0"><h2 style="margin-bottom:8px">Tempo</h2><div style="display:flex;align-items:baseline;gap:8px;margin-bottom:10px"><b style="font-size:30px">${tAprov ?? '—'}</b><span class="hint">${tAprov === null ? 'ainda sem aprovações com data' : `dia${tAprov === 1 ? '' : 's'} em média da inscrição até a aprovação`}</span></div><p class="hint" style="margin:0 0 4px">Há quanto tempo, em média, as pessoas estão paradas em cada etapa:</p>${parado.map(p => barra(p.t, p.d ?? 0, pMax, cor(p.k), p.d === null ? '' : ' d')).join('')}</div></section>`);
+}
 
 /* ---------- Início ---------- */
 if (iniciarFirebase('rs-recrutador')) auth.onAuthStateChanged(u => { if (S.criando) return; if (u) entrar(u); else { S.subs.forEach(f => f()); S.subs = []; S.me = null; telaLogin(S.avisoLogin); S.avisoLogin = null; } });
