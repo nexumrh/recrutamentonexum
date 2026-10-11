@@ -1,6 +1,15 @@
 <!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>NEXUM Recrutamento</title><meta name="theme-color" content="#14203D">
+<title>NEXUM Recrutamento</title>
+<script>
+/* Registro de erros (Sentry): cole aqui o DSN do projeto (sentry.io > Settings > Projects > Client Keys) para ativar. Vazio = desligado. */
+var SENTRY_DSN = '';
+(function () { if (!SENTRY_DSN || location.protocol !== 'https:') return; var s = document.createElement('script'); s.src = 'https://browser.sentry-cdn.com/8.33.1/bundle.min.js'; s.crossOrigin = 'anonymous';
+  s.onload = function () { try { Sentry.init({ dsn: SENTRY_DSN, environment: 'producao', release: 'nexum@' + (document.title || 'app'), sendDefaultPii: false, tracesSampleRate: 0,
+    beforeSend: function (ev) { if (ev.user) ev.user = {}; if (ev.request) { delete ev.request.cookies; delete ev.request.headers; } return ev; } }); Sentry.setTag('sistema', location.pathname.split('/').pop() || 'index'); } catch (e) { } };
+  document.head.appendChild(s); })();
+</script>
+<meta name="theme-color" content="#14203D">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Montserrat:wght@700;800&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
@@ -585,7 +594,7 @@ function iniciarTranscricao(ref, quem) {
 /* ---------- Aviso sonoro ---------- */
 function bipe() { try { const c = new (window.AudioContext || window.webkitAudioContext)(), o = c.createOscillator(), g = c.createGain(); o.frequency.value = 880; g.gain.setValueAtTime(0.0001, c.currentTime); g.gain.exponentialRampToValueAtTime(0.25, c.currentTime + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + 0.6); o.connect(g); g.connect(c.destination); o.start(); o.stop(c.currentTime + 0.65); } catch (e) { } }
 
-const S = { user: null, me: null, eid: null, emp: {}, view: 'painel', vagaSel: '', busca: '', encerrados: false, d: { vagas: [], quest: [], apps: [], priv: [], ent: [], users: [], log: [], horarios: [], pedidos: [] }, subs: [], pend: false };
+const S = { user: null, me: null, eid: null, emp: {}, view: 'painel', vagaSel: '', busca: '', encerrados: false, d: { vagas: [], quest: [], apps: [], priv: [], ent: [], users: [], log: [], horarios: [], pedidos: [], ind: [], lojas: [] }, subs: [], pend: false };
 const MSGS_PADRAO = {
   teste: 'Olá, {nome}! Você avançou no processo para {vaga}. Enviamos um teste no portal do candidato. Responda até {prazo}.',
   entrevista: 'Olá, {nome}! Queremos conversar com você sobre a vaga de {vaga}: {data}. Confirme sua presença no portal do candidato.',
@@ -593,7 +602,7 @@ const MSGS_PADRAO = {
   reprovado: 'Olá, {nome}. Obrigado por participar do processo seletivo para {vaga}. Desta vez seguimos com outro perfil, mas seus dados ficam no nosso banco de talentos para futuras vagas.'
 };
 const MOTIVOS_REPROV = ['Experiência insuficiente para a vaga', 'Não atingiu a nota mínima do teste', 'Desempenho na entrevista', 'Disponibilidade de horário', 'Pretensão salarial', 'Perfil comportamental', 'Vaga preenchida por outro candidato', 'Não compareceu à entrevista', 'Outro'];
-const PAPEIS = { admin: 'Administrador', recrutador: 'Recrutador', avaliador: 'Avaliador (gestor)' };
+const PAPEIS = { admin: 'Administrador', recrutador: 'Recrutador', avaliador: 'Avaliador (gestor)', gerente: 'Gerente de loja' };
 const ehEditor = () => ['admin', 'recrutador'].includes(S.me && S.me.role), ehAdmin = () => S.me && S.me.role === 'admin';
 const msg = (k, v) => String((S.emp.msgs || {})[k] || MSGS_PADRAO[k]).replace(/\{(\w+)\}/g, (_, x) => v[x] ?? '');
 const log = t => sub(S.eid, 'log').add({ t, por: S.me.nome, uid: S.user.uid, em: agora() }).catch(() => {});
@@ -669,25 +678,25 @@ async function entrar(u) {
   S.subs.forEach(f => f()); S.subs = []; S.user = u;
   try { const m = await db.doc(`users/${u.uid}`).get(); if (!m.exists) return sairCom('Esta conta não tem acesso de recrutador. Candidatos entram pelo portal do candidato.');
     S.me = { id: u.uid, ...m.data() }; if (S.me.ativo === false) return sairCom('Seu acesso foi desativado pelo administrador.');
-    S.eid = S.me.eid; db.doc(`users/${u.uid}`).update({ ultimoAcesso: agora() }).catch(() => {}); shell(); assinar(); }
+    S.eid = S.me.eid; if (S.me.role === 'gerente') S.view = 'loja'; else if (S.view === 'loja') S.view = 'painel'; db.doc(`users/${u.uid}`).update({ ultimoAcesso: agora() }).catch(() => {}); shell(); assinar(); novidadesRS(); }
   catch (er) { toast(msgErro(er), true); telaLogin('Não foi possível carregar sua conta.'); }
 }
 function assinar() {
   const ouvir = (q, k, f) => S.subs.push(q.onSnapshot(s => { S.d[k] = f ? f(s) : docs(s); rerender(); }, e => toast(`Sem acesso a ${k}: ${msgErro(e)}`, true)));
   S.subs.push(emp(S.eid).onSnapshot(s => { S.emp = s.data() || {}; $('#marca-emp') && ($('#marca-emp').textContent = S.emp.nome || ''); rerender(); }));
-  ouvir(sub(S.eid, 'vagas'), 'vagas'); ouvir(sub(S.eid, 'quest'), 'quest'); ouvir(sub(S.eid, 'apps'), 'apps'); ouvir(sub(S.eid, 'priv'), 'priv'); ouvir(sub(S.eid, 'entrevistas'), 'ent'); ouvir(sub(S.eid, 'horarios'), 'horarios'); ouvir(sub(S.eid, 'pedidos'), 'pedidos'); S.subs.push(sub(S.eid, 'config').doc('ia').onSnapshot(s2 => { S.ia = s2.data() || {}; }, () => {}));
+  ouvir(sub(S.eid, 'vagas'), 'vagas'); ouvir(sub(S.eid, 'quest'), 'quest'); ouvir(sub(S.eid, 'apps'), 'apps'); ouvir(sub(S.eid, 'priv'), 'priv'); ouvir(sub(S.eid, 'entrevistas'), 'ent'); ouvir(sub(S.eid, 'horarios'), 'horarios'); ouvir(sub(S.eid, 'pedidos'), 'pedidos'); ouvir(sub(S.eid, 'indicadores'), 'ind'); ouvir(sub(S.eid, 'lojas'), 'lojas'); S.subs.push(sub(S.eid, 'config').doc('rh').onSnapshot(s3 => { S.rh = s3.data() || {}; autoRH(); }, () => {})); S.subs.push(sub(S.eid, 'config').doc('ia').onSnapshot(s2 => { S.ia = s2.data() || {}; }, () => {}));
   ouvir(db.collection('users').where('eid', '==', S.eid), 'users'); if (ehAdmin()) ouvir(sub(S.eid, 'log').orderBy('em', 'desc').limit(300), 'log');
 }
 /* ---------- Estrutura ---------- */
-const NAV = [['painel', 'Painel'], ['vagas', 'Vagas'], ['cands', 'Candidatos'], ['quest', 'Questionários'], ['ent', 'Entrevistas'], ['banco', 'Banco de talentos'], ['relat', 'Relatórios'], ['equipe', 'Equipe', 'admin'], ['config', 'Configurações', 'admin']];
+const NAV = [['loja', 'Minha loja', 'gerente'], ['painel', 'Painel'], ['vagas', 'Vagas'], ['cands', 'Candidatos'], ['quest', 'Questionários'], ['ent', 'Entrevistas'], ['banco', 'Banco de talentos'], ['ind', 'Indicações'], ['relat', 'Relatórios'], ['equipe', 'Equipe', 'admin'], ['config', 'Configurações', 'admin']];
 function shell() {
   document.body.innerHTML = `<div id="toasts"></div><div id="modal-root"></div><div class="app"><nav class="side" aria-label="Menu"><div class="marca">${logoNexum({ claro: false, tam: .72 })}</div><div class="emp" id="marca-emp"></div>
-    <div class="nav">${NAV.filter(n => !n[2] || ehAdmin()).map(([k, t]) => `<button data-v="${k}">${ICONES[k] || ''}<span>${t}</span></button>`).join('')}</div><div class="eu"><b>${esc(S.me.nome)}</b><span>${PAPEIS[S.me.role]}</span><button class="btn ghost sm" id="b-sair">Sair</button></div></nav>
+    <div class="nav">${NAV.filter(n => ehGerente() ? n[2] === 'gerente' : n[2] === 'gerente' ? false : (!n[2] || ehAdmin())).map(([k, t]) => `<button data-v="${k}">${ICONES[k] || ''}<span>${t}</span></button>`).join('')}</div><div class="eu"><b>${esc(S.me.nome)}</b><span>${PAPEIS[S.me.role]}</span><button class="btn ghost sm" id="b-sair">Sair</button></div></nav>
     <main class="main"><header class="top"><div><h1 id="t-view"></h1><p id="t-sub"></p></div></header><div id="view"></div></main></div>`;
   $$('.side .nav button').forEach(b => b.onclick = () => go(b.dataset.v)); $('#b-sair').onclick = () => auth.signOut(); go(S.view);
 }
 function go(v) { S.view = v; $$('.side .nav button').forEach(b => b.classList.toggle('on', b.dataset.v === v)); render(); window.scrollTo(0, 0); }
-function render() { const el = $('#view'); if (!el) return; regEtapas(); $('#t-view').textContent = (NAV.find(n => n[0] === S.view) || [, ''])[1]; { const sb = $('#t-sub'); if (sb) sb.textContent = SUBT[S.view] || ''; } ({ painel: e => { vPainel(e); painelSLA(e); }, vagas: vVagas, cands: e => { vCands(e); extrasCands3(e); }, quest: vQuest, ent: e => { vEnt(e); if (ehEditor() && !$('#de-b', e)) { e.insertAdjacentHTML('afterbegin', '<div class="row" style="margin-bottom:12px"><span class="sp"></span><button class="btn" id="de-b">Dia de entrevistas</button></div>'); $('#de-b', e).onclick = diaEntrevistas; } }, banco: vBanco, relat: e => { vRelat(e); painelExperiencia(e); painelGraficos(e); }, equipe: vEquipe, config: vConfig })[S.view](el); }
+function render() { const el = $('#view'); if (!el) return; regEtapas(); autoRH(); $('#t-view').textContent = (NAV.find(n => n[0] === S.view) || [, ''])[1]; { const sb = $('#t-sub'); if (sb) sb.textContent = SUBT[S.view] || ''; } ({ painel: e => { vPainel(e); painelSLA(e); }, vagas: e => { vVagas(e); bannerTerc(e); }, cands: e => { vCands(e); extrasCands3(e); }, quest: vQuest, ent: e => { vEnt(e); if (ehEditor() && !$('#de-b', e)) { e.insertAdjacentHTML('afterbegin', '<div class="row" style="margin-bottom:12px"><span class="sp"></span><button class="btn" id="de-b">Dia de entrevistas</button></div>'); $('#de-b', e).onclick = diaEntrevistas; } }, banco: e => { vBanco(e); buscaIABanco(e); }, relat: e => { vRelat(e); painelExperiencia(e); painelGraficos(e); }, equipe: vEquipe, config: vConfig, loja: vGerente, ind: vIndicacoes })[S.view](el); }
 /* ---------- Painel ---------- */
 function vPainel(el) {
   const ap = S.d.apps, ativos = ap.filter(a => !final(a)), hj = iso(), mes = hj.slice(0, 7), cont = {}; ativos.forEach(a => cont[a.etapa] = (cont[a.etapa] || 0) + 1); cont.resultado = ap.filter(a => final(a)).length;
@@ -713,7 +722,7 @@ function vVagasLista(el) {
   const l = S.d.vagas.slice().sort((a, b) => (a.status === 'aberta' ? 0 : 1) - (b.status === 'aberta' ? 0 : 1) || (b.criadoEm || '').localeCompare(a.criadoEm || ''));
   const st = { aberta: ['ok', 'Aberta'], pausada: ['warn', 'Pausada'], fechada: ['', 'Fechada'] };
   el.innerHTML = `<div class="row" style="margin-bottom:14px"><span class="hint">Cada vaga tem um link próprio para divulgar no Instagram, WhatsApp e site.</span><span class="sp"></span><button class="btn sec" id="vg-p">Link de todas as vagas</button>${ehEditor() ? '<button class="btn sec" id="vg-mo">Modelos e duplicar</button><button class="btn" id="vg-n">Nova vaga</button>' : '<button class="btn" id="vg-pd">Pedir uma vaga</button>'}</div>
-    ${l.length ? `<div class="tbl-wrap"><table><thead><tr><th>Vaga</th><th>Status</th><th class="n">Inscritos</th><th class="n">Em andamento</th><th class="n">Aprovados</th><th></th></tr></thead><tbody>${l.map(v => { const a = S.d.apps.filter(x => x.vagaId === v.id); return `<tr><td><b style="font-size:15.5px">${esc(v.titulo)}</b><div class="hint">${esc([v.local, v.modalidade, v.contrato].filter(Boolean).join(', '))}${v.prazo ? `. Inscrições até ${fd(v.prazo)}` : ''}</div>${miniFunil(a)}</td><td><span class="pill ${st[v.status][0]}">${st[v.status][1]}</span></td><td class="n">${a.length}</td><td class="n">${a.filter(x => !final(x)).length}</td><td class="n">${a.filter(x => x.etapa === 'aprovado').length}</td>
+    ${l.length ? `<div class="tbl-wrap"><table><thead><tr><th>Vaga</th><th>Status</th><th class="n">Inscritos</th><th class="n">Em andamento</th><th class="n">Aprovados</th><th></th></tr></thead><tbody>${l.map(v => { const a = S.d.apps.filter(x => x.vagaId === v.id); return `<tr><td>${v.foto ? `<img src="${v.foto}" alt="" style="width:64px;height:34px;object-fit:cover;border-radius:6px;float:left;margin:2px 10px 0 0">` : ''}<b style="font-size:15.5px">${esc(v.titulo)}</b>${v.loja ? ` <span class="pill">${esc(v.loja)}</span>` : ''}<div class="hint">${esc([v.local, v.modalidade, v.contrato].filter(Boolean).join(', '))}${v.prazo ? `. Inscrições até ${fd(v.prazo)}` : ''}</div>${miniFunil(a)}</td><td><span class="pill ${st[v.status][0]}">${st[v.status][1]}</span></td><td class="n">${a.length}</td><td class="n">${a.filter(x => !final(x)).length}</td><td class="n">${a.filter(x => x.etapa === 'aprovado').length}</td>
       <td class="n" style="white-space:nowrap"><button class="btn sec sm" data-vc="${v.id}">Ver candidatos</button> <span class="mn"><button class="btn ghost sm mn-b" aria-label="Mais ações da vaga" aria-haspopup="true" aria-expanded="false">⋯</button><span class="mn-l" hidden><button class="btn ghost sm" data-vl="${v.id}">Copiar link da vaga</button><button class="btn ghost sm" data-vq="${v.id}">Gerar cartaz com QR code</button>${ehEditor() ? `<button class="btn ghost sm" data-ve="${v.id}">Editar vaga</button><button class="btn ghost sm" data-vd="${v.id}">Duplicar vaga</button>` : ''}</span></span></td></tr>`; }).join('')}</tbody></table></div>`
       : `<div class="panel empty"><b>Nenhuma vaga ainda</b>Crie a primeira vaga e divulgue o link para receber candidatos.${ehEditor() ? '<div style="margin-top:12px"><button class="btn" id="vg-n2">Nova vaga</button></div>' : ''}</div>`}`;
   const n = $('#vg-n', el) || $('#vg-n2', el); if (n) n.onclick = () => formVaga(); if ($('#vg-n2', el) && $('#vg-n', el)) $('#vg-n2', el).onclick = () => formVaga();
@@ -731,9 +740,9 @@ function formVaga(v) {
     <div class="fld full"><label for="v-b">Benefícios</label><input class="inp" id="v-b" value="${esc(v ? v.beneficios || '' : '')}" placeholder="Ex.: vale-transporte, comissão, plano odontológico"></div>
     <div class="fld"><label for="v-tq">Perguntas da triagem (na inscrição)</label><select class="inp" id="v-tq">${opts([['', 'Sem perguntas'], ...qc.map(q => [q.id, q.titulo])], v && v.triagem ? v.triagem.questId : (v && v.triagemQuestId) || '')}</select></div><div class="fld"><label for="v-p">Inscrições até</label><input class="inp" type="date" id="v-p" value="${v ? v.prazo || '' : ''}"></div>
     <div class="fld full"><label for="v-ex">Etapas extras desta vaga (uma por linha, entre a entrevista e o resultado)</label><textarea class="inp" id="v-ex" style="min-height:60px" placeholder="Ex.: Dia de experiência na loja">${esc(((v && v.etapasExtra) || []).map(x => x.t).join('\n'))}</textarea></div><div class="fld"><label for="v-st">Status</label><select class="inp" id="v-st">${opts([['aberta', 'Aberta (recebendo candidatos)'], ['pausada', 'Pausada'], ['fechada', 'Fechada']], v ? v.status : 'aberta')}</select></div></div>
-    <p class="note">Não peça idade, estado civil, foto, religião ou outros dados que possam discriminar (Lei 9.029/1995).</p>`, { size: 'lg', foot: `${v && v.id && ehAdmin() ? '<button class="btn ghost" id="v-x" style="color:var(--bad);margin-right:auto">Excluir</button>' : ''}<button class="btn sec" data-close>Cancelar</button><button class="btn" id="v-ok">Salvar vaga</button>`, onMount: m => {
+    <p class="note">Não peça idade, estado civil, foto, religião ou outros dados que possam discriminar (Lei 9.029/1995).</p>`, { size: 'lg', foot: `${v && v.id && ehAdmin() ? '<button class="btn ghost" id="v-x" style="color:var(--bad);margin-right:auto">Excluir</button>' : ''}<button class="btn sec" data-close>Cancelar</button><button class="btn" id="v-ok">Salvar vaga</button>`, onMount: m => { ligarFormVagaLoja(m, v);
     $('#v-ok', m).onclick = async () => { const t = $('#v-t', m).value.trim(); if (t.length < 3) return toast('Informe o título da vaga.', true); const qid = $('#v-tq', m).value, q = questDe(qid);
-      const d = { titulo: t, area: $('#v-a', m).value.trim(), local: $('#v-l', m).value.trim(), modalidade: $('#v-m', m).value, contrato: $('#v-c', m).value, salario: $('#v-s', m).value.trim(), qtd: Math.max(1, parseInt($('#v-q', m).value) || 1), descricao: $('#v-d', m).value.trim(), requisitos: $('#v-r', m).value.trim(), beneficios: $('#v-b', m).value.trim(), prazo: $('#v-p', m).value, status: $('#v-st', m).value, empresa: S.emp.nome || '',
+      const lj = await prepLoja(m); if (lj === false) return; const d = { ...lj, titulo: t, area: $('#v-a', m).value.trim(), local: $('#v-l', m).value.trim(), modalidade: $('#v-m', m).value, contrato: $('#v-c', m).value, salario: $('#v-s', m).value.trim(), qtd: Math.max(1, parseInt($('#v-q', m).value) || 1), descricao: $('#v-d', m).value.trim(), requisitos: $('#v-r', m).value.trim(), beneficios: $('#v-b', m).value.trim(), prazo: $('#v-p', m).value, status: $('#v-st', m).value, empresa: S.emp.nome || '',
         etapasExtra: $('#v-ex', m).value.split('\n').map(t => t.trim()).filter(Boolean).slice(0, 4).map(t => ({ k: slugEt(t), t })), triagem: q ? { questId: q.id, titulo: q.titulo, instrucoes: q.instrucoes || '', perguntas: semGabarito(q.perguntas) } : null, atualizadoEm: agora() };
       try { if (v && v.id) await sub(S.eid, 'vagas').doc(v.id).update(d); else { const r = await sub(S.eid, 'vagas').add({ ...d, ...(v && v.pedidoId ? { pedidoId: v.pedidoId } : {}), criadoEm: agora(), por: S.me.nome }); if (d.status === 'aberta') setTimeout(() => avisarInteressados({ id: r.id, ...d }), 400); } log(`${v && v.id ? 'Editou' : 'Criou'} a vaga ${t}`); closeModal(); toast('Vaga salva.'); } catch (er) { toast(msgErro(er), true); } };
     const x = $('#v-x', m); if (x) x.onclick = () => { const n = S.d.apps.filter(a => a.vagaId === v.id).length; if (n) return toast(`A vaga tem ${n} candidatura(s). Feche a vaga em vez de excluir.`, true); confirmar('Excluir esta vaga?', async () => { await sub(S.eid, 'vagas').doc(v.id).delete(); log(`Excluiu a vaga ${v.titulo}`); }, 'Excluir', true); }; } });
@@ -802,7 +811,7 @@ function abrirCand(id, aba = 'resumo') {
     $$('[data-nota]', m).forEach(i => i.onchange = async () => { const v2 = i.value === '' ? null : Math.max(0, Math.min(10, num(i.value))); await savePriv({ notas: { ...(pv.notas || {}), [i.dataset.nota]: v2 } }); toast('Nota salva.'); });
     const mv = $('#cd-mv', m); if (mv) mv.onchange = async () => { if (!mv.value) return; await upd({ etapa: mv.value, etapaRot: ETAPA[mv.value] || '' }, `Movido para ${ETAPA[mv.value]}`); closeModal(); toast(`Movido para ${ETAPA[mv.value]}.`); };
     const bt = $('#cd-t', m); if (bt) bt.onclick = () => enviarTeste(a); const be = $('#cd-e', m); if (be) be.onclick = () => agendarEntrevista(a);
-    const bcv = $('#cd-cv', m); if (bcv) bcv.onclick = () => convidarHorario(a); const bnx = $('#cd-nx', m); if (bnx) bnx.onclick = () => exportarAdmissao(a);
+    const bcv = $('#cd-cv', m); if (bcv) bcv.onclick = () => convidarHorario(a); const bnx = $('#cd-nx', m); if (bnx) bnx.onclick = () => enviarRH(a, true);
     const crv = $('#cg-rv', m); if (crv) crv.onclick = async () => { await savePriv({ revelado: agora() }); log(`Revelou a identidade de um candidato na triagem às cegas: ${p.nome}`); setTimeout(() => abrirCand(id, 'resumo'), 200); };
     const iag = $('#ia-go', m); if (iag) iag.onclick = async () => { iag.disabled = true; iag.textContent = 'Analisando…'; try { await analisarIA(a); toast('Análise da IA pronta.'); setTimeout(() => abrirCand(id, aba), 200); } catch (er) { iag.disabled = false; iag.textContent = 'Analisar com IA'; toast(er.message, true); } };
     $$('[data-usa]', m).forEach(b => b.onclick = () => { const i = $(`[data-nota="${b.dataset.usa}"]`, m); if (i) { i.value = b.dataset.v; i.dispatchEvent(new Event('change')); } });
@@ -850,7 +859,7 @@ function decidir(a, res) {
     { foot: `<button class="btn sec" data-close>Cancelar</button><button class="btn ${res === 'aprovado' ? 'ok' : 'bad'}" id="dc-ok">${res === 'aprovado' ? 'Aprovar' : 'Reprovar'}</button>`, onMount: m => $('#dc-ok', m).onclick = async () => {
       const t = $('#dc-m', m).value.trim(), mt = res === 'reprovado' ? $('#dc-mt', m).value : '';
       try { await sub(S.eid, 'apps').doc(a.id).update({ etapa: res, decisao: { resultado: res, msg: t, em: agora(), por: S.me.nome }, atualizadoEm: agora(), mensagens: [...(a.mensagens || []), { de: 'rh', t, por: S.me.nome, em: agora() }], historico: [...(a.historico || []), { t: res === 'aprovado' ? 'Aprovado' : `Reprovado${mt ? ` (${mt})` : ''}`, em: agora(), por: S.me.nome }] });
-        if (mt) await sub(S.eid, 'priv').doc(a.id).set({ motivo: mt }, { merge: true }); log(`${res === 'aprovado' ? 'Aprovou' : 'Reprovou'} ${a.perfil.nome} para ${vaga}`);
+        if (mt) await sub(S.eid, 'priv').doc(a.id).set({ motivo: mt }, { merge: true }); if (res === 'aprovado' && S.rh && S.rh.auto && S.rh.tid) { S.rhFeitos.add(a.id); setTimeout(() => { const a2 = S.d.apps.find(x => x.id === a.id); if (a2) enviarRH(a2, false).then(ok => ok && toast('Admissão aberta no NEXUM RH automaticamente.')); }, 900); } log(`${res === 'aprovado' ? 'Aprovou' : 'Reprovou'} ${a.perfil.nome} para ${vaga}`);
         const w = waLink(a.perfil.telefone, t); modal(res === 'aprovado' ? 'Candidato aprovado' : 'Candidato reprovado', `<p style="margin:0">A mensagem já está no portal do candidato.${w ? ' Quer avisar também pelo WhatsApp?' : ''}</p>`, { size: 'sm', foot: `<button class="btn sec" data-close>Fechar</button>${w ? `<a class="btn" href="${w}" target="_blank" rel="noopener">Enviar no WhatsApp</a>` : ''}` }); }
       catch (er) { toast(msgErro(er), true); } } });
 }
@@ -980,22 +989,23 @@ function vRelat(el) {
 /* ---------- Equipe ---------- */
 function vEquipe(el) {
   if (!ehAdmin()) { el.innerHTML = '<div class="panel empty"><b>Acesso restrito</b>Só o administrador gerencia a equipe.</div>'; return; }
-  el.innerHTML = `<div class="row" style="margin-bottom:14px"><span class="hint">Recrutadores gerenciam vagas e candidatos. Avaliadores (gestores das lojas) entrevistam, avaliam e comentam, sem mexer nas etapas.</span><span class="sp"></span><button class="btn" id="eq-n">Adicionar pessoa</button></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Último acesso</th><th></th></tr></thead><tbody>${S.d.users.map(u => `<tr><td><span class="nome-av"><span class="av" style="--h:${hueNome(u.nome)}" aria-hidden="true">${esc(iniciaisN(u.nome))}</span><b>${esc(u.nome)}</b>${u.ativo === false ? '&nbsp;<span class="pill bad">desativado</span>' : ''}</span></td><td>${esc(u.email)}</td><td>${u.id === S.user.uid ? `<span class="pill papel-${u.role}">${PAPEIS[u.role]}</span>` : `<select class="inp" data-pp="${u.id}" style="width:auto">${opts(Object.entries(PAPEIS), u.role)}</select>`}</td><td class="hint">${u.ultimoAcesso ? fdt(u.ultimoAcesso) : 'nunca'}</td><td>${u.id !== S.user.uid ? `<button class="btn ghost sm" data-at="${u.id}">${u.ativo === false ? 'Reativar' : 'Desativar'}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
-  $('#eq-n', el).onclick = () => modal('Adicionar pessoa à equipe', `<div class="fld"><label for="eq-nm">Nome</label><input class="inp" id="eq-nm"></div><div class="fld"><label for="eq-e">E-mail</label><input class="inp" type="email" id="eq-e"></div><div class="fld"><label for="eq-s">Senha inicial (mínimo de 6 caracteres)</label><input class="inp" id="eq-s" value="${uid(10)}"></div><div class="fld"><label for="eq-p">Papel</label><select class="inp" id="eq-p">${opts(Object.entries(PAPEIS), 'recrutador')}</select></div><p class="hint">Passe o e-mail e a senha para a pessoa. Ela pode trocar a senha em "Esqueci minha senha".</p>`,
+  el.innerHTML = `<div class="row" style="margin-bottom:14px"><span class="hint">Recrutadores gerenciam vagas e candidatos. Avaliadores (gestores das lojas) entrevistam, avaliam e comentam, sem mexer nas etapas. Gerentes de loja veem só a tela "Minha loja": pedem funcionário, acompanham as vagas da loja e dizem quem querem contratar.</span><span class="sp"></span><button class="btn" id="eq-n">Adicionar pessoa</button></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Papel</th><th>Último acesso</th><th></th></tr></thead><tbody>${S.d.users.map(u => `<tr><td><span class="nome-av"><span class="av" style="--h:${hueNome(u.nome)}" aria-hidden="true">${esc(iniciaisN(u.nome))}</span><b>${esc(u.nome)}</b>${u.ativo === false ? '&nbsp;<span class="pill bad">desativado</span>' : ''}</span>${u.role === 'gerente' ? `<div class="hint">Loja: ${esc(u.loja || 'não informada')} <button class="btn ghost sm" data-lj="${u.id}">Alterar</button></div>` : ''}</td><td>${esc(u.email)}</td><td>${u.id === S.user.uid ? `<span class="pill papel-${u.role}">${PAPEIS[u.role]}</span>` : `<select class="inp" data-pp="${u.id}" style="width:auto">${opts(Object.entries(PAPEIS), u.role)}</select>`}</td><td class="hint">${u.ultimoAcesso ? fdt(u.ultimoAcesso) : 'nunca'}</td><td>${u.id !== S.user.uid ? `<button class="btn ghost sm" data-at="${u.id}">${u.ativo === false ? 'Reativar' : 'Desativar'}</button>` : ''}</td></tr>`).join('')}</tbody></table></div>`;
+  $('#eq-n', el).onclick = () => modal('Adicionar pessoa à equipe', `<div class="fld"><label for="eq-nm">Nome</label><input class="inp" id="eq-nm"></div><div class="fld"><label for="eq-e">E-mail</label><input class="inp" type="email" id="eq-e"></div><div class="fld"><label for="eq-s">Senha inicial (mínimo de 6 caracteres)</label><input class="inp" id="eq-s" value="${uid(10)}"></div><div class="fld"><label for="eq-p">Papel</label><select class="inp" id="eq-p">${opts(Object.entries(PAPEIS), 'recrutador')}</select></div><div class="fld"><label for="eq-lj">Loja (para o gerente de loja ver as vagas dela)</label><input class="inp" id="eq-lj" placeholder="Ex.: Loja Shopping Catuaí"></div><p class="hint">Passe o e-mail e a senha para a pessoa. Ela pode trocar a senha em "Esqueci minha senha".</p>`,
     { foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="eq-ok">Adicionar</button>', onMount: m => $('#eq-ok', m).onclick = async () => { const nm = $('#eq-nm', m).value.trim(), e = $('#eq-e', m).value.trim().toLowerCase(), s = $('#eq-s', m).value; if (nm.length < 2 || !emailOk(e)) return toast('Informe nome e e-mail válidos.', true);
       const b = $('#eq-ok', m); b.disabled = true; try { const aux = firebase.initializeApp(FIREBASE_CONFIG, 'rs-aux-' + Date.now()).auth(); await aux.setPersistence(firebase.auth.Auth.Persistence.NONE); const cr = await aux.createUserWithEmailAndPassword(e, s); const nid = cr.user.uid; await aux.signOut();
-        await db.doc(`users/${nid}`).set({ eid: S.eid, role: $('#eq-p', m).value, nome: nm, email: e, ativo: true, criadoEm: agora(), por: S.me.nome }); log(`Adicionou ${nm} à equipe`); closeModal(); toast('Pessoa adicionada.'); } catch (er) { b.disabled = false; toast(msgErro(er), true); } } });
-  $$('[data-pp]', el).forEach(s => s.onchange = async () => { await db.doc(`users/${s.dataset.pp}`).update({ role: s.value }); log(`Mudou o papel de ${(S.d.users.find(u => u.id === s.dataset.pp) || {}).nome} para ${PAPEIS[s.value]}`); toast('Papel atualizado.'); });
+        await db.doc(`users/${nid}`).set({ eid: S.eid, role: $('#eq-p', m).value, loja: $('#eq-lj', m).value.trim(), nome: nm, email: e, ativo: true, criadoEm: agora(), por: S.me.nome }); log(`Adicionou ${nm} à equipe`); closeModal(); toast('Pessoa adicionada.'); } catch (er) { b.disabled = false; toast(msgErro(er), true); } } });
+  $$('[data-lj]', el).forEach(b => b.onclick = async () => { const u = S.d.users.find(x => x.id === b.dataset.lj), v = prompt(`Loja de ${u.nome}:`, u.loja || ''); if (v === null) return; await db.doc(`users/${u.id}`).update({ loja: v.trim().slice(0, 120) }); log(`Definiu a loja de ${u.nome}: ${v.trim()}`); toast('Loja atualizada.'); });
+  $$('[data-pp]', el).forEach(s => s.onchange = async () => { if (s.value === 'gerente') { const u = S.d.users.find(x => x.id === s.dataset.pp) || {}, lj = prompt(`Qual loja ${u.nome || ''} gerencia?`, u.loja || ''); if (lj !== null) await db.doc(`users/${s.dataset.pp}`).update({ loja: lj.trim().slice(0, 120) }); } await db.doc(`users/${s.dataset.pp}`).update({ role: s.value }); log(`Mudou o papel de ${(S.d.users.find(u => u.id === s.dataset.pp) || {}).nome} para ${PAPEIS[s.value]}`); toast('Papel atualizado.'); });
   $$('[data-at]', el).forEach(b => b.onclick = async () => { const u = S.d.users.find(x => x.id === b.dataset.at); await db.doc(`users/${u.id}`).update({ ativo: u.ativo === false }); log(`${u.ativo === false ? 'Reativou' : 'Desativou'} ${u.nome}`); });
 }
 /* ---------- Configurações ---------- */
 function vConfig(el, aba = S.cfgAba || 'emp') {
   if (!ehAdmin()) { el.innerHTML = '<div class="panel empty"><b>Acesso restrito</b></div>'; return; } S.cfgAba = aba; const e = S.emp, ms = { ...MSGS_PADRAO, ...(e.msgs || {}) };
-  el.innerHTML = `<div class="tabs">${[['emp', 'Empresa'], ['car', 'Página de carreiras'], ['prazo', 'Prazos das etapas'], ['ia', 'Inteligência artificial'], ['msg', 'Mensagens padrão'], ['log', 'Registro de atividades']].map(([k, t]) => `<button class="${aba === k ? 'on' : ''}" data-a="${k}">${t}</button>`).join('')}</div><div id="cf-b"></div>`;
-  $$('.tabs button', el).forEach(b => b.onclick = () => vConfig(el, b.dataset.a)); const w = $('#cf-b', el); if (aba === 'prazo') return cfgPrazos(w); if (aba === 'car') return cfgCarreiras(w); if (aba === 'ia') return cfgIA(w);
+  el.innerHTML = `<div class="tabs">${[['emp', 'Empresa'], ['car', 'Página de carreiras'], ['prazo', 'Prazos das etapas'], ['ia', 'Inteligência artificial'], ['msg', 'Mensagens padrão'], ['rh', 'NEXUM RH'], ['lojas', 'Lojas'], ['log', 'Registro de atividades']].map(([k, t]) => `<button class="${aba === k ? 'on' : ''}" data-a="${k}">${t}</button>`).join('')}</div><div id="cf-b"></div>`;
+  $$('.tabs button', el).forEach(b => b.onclick = () => vConfig(el, b.dataset.a)); const w = $('#cf-b', el); if (aba === 'prazo') return cfgPrazos(w); if (aba === 'car') return cfgCarreiras(w); if (aba === 'ia') return cfgIA(w); if (aba === 'rh') return cfgRH(w); if (aba === 'lojas') return cfgLojas(w);
   if (aba === 'emp') { w.innerHTML = `<section class="panel"><div class="grid"><div class="fld"><label for="ce-n">Nome da empresa</label><input class="inp" id="ce-n" value="${esc(e.nome || '')}"></div><div class="fld"><label for="ce-c">Cidade</label><input class="inp" id="ce-c" value="${esc(e.cidade || '')}"></div><div class="fld full"><label for="ce-e">Endereço para entrevistas presenciais</label><input class="inp" id="ce-e" value="${esc(e.endereco || '')}"></div>
-      <div class="fld full"><label for="ce-s">Sobre a empresa (aparece no portal do candidato)</label><textarea class="inp" id="ce-s">${esc(e.sobre || '')}</textarea></div><div class="fld"><label for="ce-r">Guardar candidatos não contratados por (meses)</label><input class="inp" type="number" min="1" id="ce-r" value="${e.retencaoMeses || 12}"></div><div class="fld full lgpd-box"><label class="row" style="gap:8px;font-weight:600;color:var(--ink)"><input type="checkbox" id="ce-la" ${e.lgpdAuto === false ? '' : 'checked'}> Anonimizar automaticamente quem passou do prazo de guarda (LGPD)</label><p class="hint" style="margin:6px 0 0">Uma vez por dia, quando um administrador abre o sistema, os dados pessoais de quem não foi contratado e passou do prazo acima são apagados. Ficam só os números para os relatórios. ${e.lgpdUltima ? `Última verificação: ${fdt(e.lgpdUltima.em)}, ${e.lgpdUltima.qtd} anonimizada(s).` : 'Ainda não rodou.'} <button type="button" class="btn ghost sm" id="ce-lr">Verificar agora</button></p></div><div class="fld"><label>Portal do candidato</label><div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(linkPortal())}"><button class="btn sec" id="ce-l">Copiar</button></div></div></div><div class="row end"><button class="btn" id="ce-ok">Salvar</button></div></section>`;
+      <div class="fld full"><label for="ce-s">Sobre a empresa (aparece no portal do candidato)</label><textarea class="inp" id="ce-s">${esc(e.sobre || '')}</textarea></div><div class="fld"><label for="ce-r">Guardar candidatos não contratados por (meses)</label><input class="inp" type="number" min="1" id="ce-r" value="${e.retencaoMeses || 12}"></div><div class="fld full lgpd-box"><label class="row" style="gap:8px;font-weight:600;color:var(--ink)"><input type="checkbox" id="ce-la" ${e.lgpdAuto === false ? '' : 'checked'}> Anonimizar automaticamente quem passou do prazo de guarda (LGPD)</label><p class="hint" style="margin:6px 0 0">Uma vez por dia, quando um administrador abre o sistema, os dados pessoais de quem não foi contratado e passou do prazo acima são apagados. Ficam só os números para os relatórios. ${e.lgpdUltima ? `Última verificação: ${fdt(e.lgpdUltima.em)}, ${e.lgpdUltima.qtd} anonimizada(s).` : 'Ainda não rodou.'} <button type="button" class="btn ghost sm" id="ce-lr">Verificar agora</button></p></div><div class="fld"><label>Portal do candidato</label><div class="row" style="flex-wrap:nowrap"><input class="inp" readonly value="${esc(linkPortal())}"><button class="btn sec" id="ce-l">Copiar</button></div></div></div><div class="row end"><button class="btn sec" id="ce-tc" type="button" onclick="pedirTerc()">Seleção terceirizada pela NEXUM</button><button class="btn" id="ce-ok">Salvar</button></div></section>`;
     $('#ce-l', w).onclick = () => { navigator.clipboard && navigator.clipboard.writeText(linkPortal()); toast('Link copiado.'); };
     $('#ce-ok', w).onclick = async () => { await emp(S.eid).update({ nome: $('#ce-n', w).value.trim() || e.nome, cidade: $('#ce-c', w).value.trim(), endereco: $('#ce-e', w).value.trim(), sobre: $('#ce-s', w).value.trim(), retencaoMeses: Math.max(1, parseInt($('#ce-r', w).value) || 12), lgpdAuto: $('#ce-la', w).checked }); log('Atualizou os dados da empresa'); toast('Salvo.'); }; }
   else if (aba === 'msg') { const rot = { teste: 'Envio de teste', entrevista: 'Convite para entrevista', aprovado: 'Aprovação', reprovado: 'Reprovação' };
@@ -1315,7 +1325,7 @@ function ligarFicha3(m, a, pv) {
   { const h = $('.modal-h h3', m); if (h && !h.querySelector('.av')) h.insertAdjacentHTML('afterbegin', `<span class="av" style="--h:${hueNome(nomeVis(a))}" aria-hidden="true">${esc(iniciaisN(nomeVis(a)))}</span>`); }
   $$('[data-rf]', m).forEach(b => b.onclick = () => checarReferencia(a, +b.dataset.rf)); painelProposta(m, a);
   const f = $('.modal-f', m); if (f && ehEditor() && etapaV(a) === 'aprovado') f.insertAdjacentHTML('afterbegin', `<button class="btn ${a.proposta ? 'sec' : ''}" id="cd-pp">${a.proposta ? 'Reenviar proposta' : 'Enviar carta-proposta'}</button>`);
-  const pp = $('#cd-pp', m); if (pp) pp.onclick = () => enviarProposta(a);
+  const pp = $('#cd-pp', m); if (pp) pp.onclick = () => enviarProposta(a); fichaExtrasL2(m, a, pv); botaoEnderecoFicha(m, a);
 }
 /* ---------- Prazos por etapa ---------- */
 const SLA_PADRAO = { inscrito: 2, triagem: 3, teste: 4, entrevista: 5 };
@@ -1458,6 +1468,325 @@ setTimeout(() => { try { rotinaLGPD(); } catch (e) { } }, 9000); setInterval(() 
 
 document.addEventListener('click', ev => { if (ev.target && ev.target.id === 'ce-lr') rotinaLGPD(true).then(n => toast(`Verificação feita: ${n || 0} candidatura(s) anonimizada(s).`)); });
 /* =====================================================================
+   LOTE 2: tela do gerente da loja, indicação de funcionários e
+   aprovado vira admissão sozinho no NEXUM RH.
+   ===================================================================== */
+Object.assign(ICONES, {
+  loja: ICO('<path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9h18"/><path d="M9 20v-6h6v6"/>'),
+  ind: ICO('<circle cx="8" cy="8" r="3.5"/><path d="M2 20a6 6 0 0 1 12 0"/><path d="M17 8v6M14 11h6"/>')
+});
+Object.assign(SUBT, { loja: 'Peça funcionários, acompanhe as vagas da sua loja e diga quem você quer contratar.', ind: 'Funcionários indicam pessoas para as vagas e você acompanha o bônus de cada indicação.' });
+const normL = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+const ehGerente = () => S.me && S.me.role === 'gerente';
+/* ---------- Gerente da loja ---------- */
+function vagasDaLoja() {
+  const meus = S.d.pedidos.filter(p => p.porUid === S.user.uid).map(p => p.id), lj = normL(S.me.loja);
+  return S.d.vagas.filter(v => (v.pedidoId && meus.includes(v.pedidoId)) || (lj && (normL(v.local).includes(lj) || normL(v.loja).includes(lj) || (normL(v.loja) && lj.includes(normL(v.loja))))));
+}
+const VOTO_G = { sim: ['ok', 'Quero contratar'], talvez: ['warn', 'Talvez'], nao: ['bad', 'Não serve'] };
+function vGerente(el) {
+  const vs = vagasDaLoja(), ids = vs.map(v => v.id), apps = S.d.apps.filter(a => ids.includes(a.vagaId) && !a.anonimizado);
+  const ativos = apps.filter(a => !final(a) && a.etapa !== 'inscrito').sort((a, b) => (a.etapa === 'entrevista' ? 0 : 1) - (b.etapa === 'entrevista' ? 0 : 1) || (b.atualizadoEm || '').localeCompare(a.atualizadoEm || ''));
+  const novos = apps.filter(a => a.etapa === 'inscrito').length, aprov = apps.filter(a => etapaV(a) === 'aprovado').sort((a, b) => ((b.decisao || {}).em || '').localeCompare((a.decisao || {}).em || '')).slice(0, 6);
+  const hoje0 = new Date(); hoje0.setHours(0, 0, 0, 0);
+  const ents = S.d.ent.filter(e => ids.includes(e.vagaId) && e.status !== 'cancelada' && new Date(e.inicio) >= hoje0).sort((a, b) => a.inicio.localeCompare(b.inicio)).slice(0, 8);
+  const peds = S.d.pedidos.filter(p => p.porUid === S.user.uid).sort((a, b) => (b.em || '').localeCompare(a.em || '')).slice(0, 8), stp = { pendente: ['warn', 'Aguardando'], aprovado: ['ok', 'Aprovado'], recusado: ['bad', 'Recusado'] };
+  const meuInd = S.d.ind.find(x => x.porUid === S.user.uid && x.proprio);
+  el.innerHTML = `<section class="panel gl-hero"><div><h2 style="margin:0 0 4px">Olá, ${esc(primeiro(S.me.nome))}!</h2><p class="hint" style="margin:0">${S.me.loja ? `Loja: <b>${esc(S.me.loja)}</b>` : 'Peça ao administrador para informar a sua loja na Equipe.'}</p></div>
+      <div class="gl-acoes"><button class="btn gl-b" id="gl-ped">${ICONES.vagas}<span>Pedir funcionário</span></button><button class="btn sec gl-b" id="gl-ind">${ICONES.ind}<span>Indicar alguém</span></button></div></section>
+    <div class="kpis" style="margin-bottom:14px"><div class="kpi"><b>${vs.filter(v => v.status === 'aberta').length}</b><span>vagas abertas na loja</span></div><div class="kpi"><b>${ativos.length}</b><span>candidatos em seleção</span></div><div class="kpi"><b>${novos}</b><span>inscritos novos</span></div><div class="kpi"><b>${ents.length}</b><span>entrevistas marcadas</span></div></div>
+    <section class="panel"><h2 style="margin-bottom:10px">Candidatos para você avaliar</h2>${ativos.length ? `<div class="gl-cands">${ativos.map(a => { const g = privDe(a.id).gerente, p = a.perfil || {}; return `<div class="gl-c"><div class="row" style="gap:10px;align-items:flex-start"><span class="av" style="--h:${hueNome(nomeVis(a))}" aria-hidden="true">${esc(iniciaisN(nomeVis(a)))}</span><div style="flex:1;min-width:0"><b>${esc(nomeVis(a))}</b><div class="hint">${esc(vagaDe(a.vagaId).titulo || a.vagaTitulo || '')} · ${esc(ETAPA[etapaV(a)] || etapaV(a))}${p.cidade ? ' · ' + esc(p.cidade) : ''}</div></div>${g ? `<span class="pill ${VOTO_G[g.voto][0]}">${VOTO_G[g.voto][1]}</span>` : ''}</div>
+        ${p.resumo ? `<p class="hint" style="margin:8px 0 0">${esc(String(p.resumo).slice(0, 160))}${String(p.resumo).length > 160 ? '…' : ''}</p>` : ''}${g && g.obs ? `<p style="margin:6px 0 0;font-size:13px">Sua observação: ${esc(g.obs)}</p>` : ''}
+        <div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="btn sm ok" data-gv="sim" data-ga="${a.id}">Quero contratar</button><button class="btn sm sec" data-gv="talvez" data-ga="${a.id}">Talvez</button><button class="btn sm sec" data-gv="nao" data-ga="${a.id}">Não serve</button><span class="sp"></span><button class="btn ghost sm" data-ab="${a.id}">Ver ficha</button></div></div>`; }).join('')}</div>` : '<p class="hint" style="margin:0">Quando o RH selecionar candidatos para as vagas da sua loja, eles aparecem aqui para você dar a sua opinião.</p>'}</section>
+    <div class="gl-2"><section class="panel"><h2 style="margin-bottom:10px">Próximas entrevistas</h2>${ents.length ? `<ul class="list">${ents.map(e => `<li><div class="t"><div><b>${esc(e.candNome || '')}</b> · ${esc(e.vagaTitulo || vagaDe(e.vagaId).titulo || '')}</div><div>${fdt(e.inicio)} · ${e.tipo === 'video' ? 'por vídeo' : esc(e.local || 'presencial')}</div></div></li>`).join('')}</ul>` : '<p class="hint" style="margin:0">Nenhuma entrevista marcada.</p>'}</section>
+      <section class="panel"><h2 style="margin-bottom:10px">Meus pedidos de funcionário</h2>${peds.length ? `<ul class="list">${peds.map(p => `<li><div class="t"><div><b>${esc(p.cargo)}</b>${p.qtd > 1 ? ` (${p.qtd})` : ''} <span class="pill ${stp[p.status][0]}">${stp[p.status][1]}</span></div><div>${fd(p.em)}${p.resposta && p.status !== 'aprovado' ? ' · ' + esc(p.resposta) : ''}</div></div></li>`).join('')}</ul>` : '<p class="hint" style="margin:0">Você ainda não pediu nenhum funcionário.</p>'}</section></div>
+    <section class="panel"><h2 style="margin-bottom:10px">Aprovados para a sua loja</h2>${aprov.length ? `<ul class="list">${aprov.map(a => `<li><div class="t"><div><b>${esc(a.perfil.nome)}</b> · ${esc(vagaDe(a.vagaId).titulo || a.vagaTitulo || '')}</div><div>Aprovado em ${fd((a.decisao || {}).em || a.atualizadoEm)}${a.proposta && a.proposta.inicio ? ' · começa em ' + fd(a.proposta.inicio) : ''}${a.enviadoRH ? ' · admissão aberta no RH' : ''}</div></div></li>`).join('')}</ul>` : '<p class="hint" style="margin:0">Nenhum aprovado ainda.</p>'}</section>`;
+  $('#gl-ped', el).onclick = () => { formPedido(); setTimeout(() => { const l = $('#pe-l'); if (l && S.me.loja) l.value = S.me.loja; }, 30); };
+  $('#gl-ind', el).onclick = () => meuLinkIndicacao(meuInd);
+  $$('[data-ab]', el).forEach(b => b.onclick = () => abrirCand(b.dataset.ab));
+  $$('[data-ga]', el).forEach(b => b.onclick = () => votoGerente(S.d.apps.find(a => a.id === b.dataset.ga), b.dataset.gv));
+}
+function votoGerente(a, voto) {
+  const g = privDe(a.id).gerente || {};
+  modal(`${VOTO_G[voto][1]}: ${nomeVis(a)}`, `<div class="fld"><label for="gv-o">Quer explicar? (o RH vê)</label><textarea class="inp" id="gv-o" placeholder="${voto === 'sim' ? 'Ex.: atendeu muito bem no teste da loja, pode começar segunda.' : voto === 'nao' ? 'Ex.: não tem disponibilidade aos sábados.' : 'Ex.: gostei, mas quero ver outro candidato antes.'}">${esc(g.voto === voto ? g.obs || '' : '')}</textarea></div>`,
+    { size: 'sm', foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="gv-ok">Enviar ao RH</button>', onMount: m => $('#gv-ok', m).onclick = async () => {
+      try { await sub(S.eid, 'priv').doc(a.id).set({ gerente: { voto, obs: $('#gv-o', m).value.trim().slice(0, 600), por: S.me.nome, uid: S.user.uid, em: agora() } }, { merge: true });
+        log(`Gerente ${S.me.nome} avaliou ${a.perfil.nome}: ${VOTO_G[voto][1]}`); closeModal(); toast('Sua opinião foi enviada ao RH.'); } catch (er) { toast(msgErro(er), true); } } });
+}
+/* ---------- Indicação de funcionários ---------- */
+const codInd = () => { const a = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s = ''; for (let i = 0; i < 6; i++) s += a[Math.floor(Math.random() * a.length)]; return s; };
+const linkInd = (cod, vid) => { const u = new URL(linkPortal(vid)); u.searchParams.set('ind', cod); return u.href; };
+const nomeInd = cod => (S.d.ind.find(x => x.id === cod) || {}).nome || '';
+async function meuLinkIndicacao(x) {
+  if (!x) { const cod = codInd(); try { await sub(S.eid, 'indicadores').doc(cod).set({ nome: S.me.nome, telefone: '', setor: S.me.loja || '', porUid: S.user.uid, proprio: true, criadoEm: agora() }); x = { id: cod, nome: S.me.nome }; } catch (er) { return toast(msgErro(er), true); } }
+  modalLinkInd(x);
+}
+function modalLinkInd(x) {
+  const abertas = S.d.vagas.filter(v => v.status === 'aberta'), bonus = num(S.emp.bonusIndicacao);
+  modal(`Link de indicação: ${x.nome}`, `<p class="hint" style="margin-top:0">Quem se candidatar por este link fica marcado como indicação de <b>${esc(x.nome)}</b>.${bonus ? ` Se for contratado e passar ${S.emp.bonusDias || 90} dias na empresa, o bônus é de <b>R$ ${bonus.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>.` : ''}</p>
+    <div class="fld"><label for="li-v">Vaga</label><select class="inp" id="li-v">${opts([['', 'Todas as vagas abertas'], ...abertas.map(v => [v.id, v.titulo + (v.local ? ' · ' + v.local : '')])], '')}</select></div>
+    <div class="fld"><label for="li-l">Link</label><input class="inp" id="li-l" readonly value="${esc(linkInd(x.id))}"></div><p class="hint">Código da indicação: <b>${esc(x.id)}</b></p>`,
+    { foot: '<button class="btn sec" data-close>Fechar</button><a class="btn sec" id="li-w" target="_blank" rel="noopener">Enviar no WhatsApp</a><button class="btn" id="li-c">Copiar link</button>', onMount: m => {
+      const at = () => { const l = linkInd(x.id, $('#li-v', m).value), v = vagaDe($('#li-v', m).value); $('#li-l', m).value = l; $('#li-w', m).href = 'https://wa.me/?text=' + encodeURIComponent(`${v.titulo ? `Vaga de ${v.titulo} na ${S.emp.nome || 'empresa'}` : `Vagas abertas na ${S.emp.nome || 'empresa'}`}! Candidate-se por este link: ${l}`); };
+      $('#li-v', m).onchange = at; at(); $('#li-c', m).onclick = () => { navigator.clipboard && navigator.clipboard.writeText($('#li-l', m).value); toast('Link copiado.'); }; } });
+}
+function statusBonus(a) {
+  const dias = +(S.emp.bonusDias || 90);
+  if (a.bonusPago) return ['ok', `Bônus pago em ${fd(a.bonusPago.em)}`];
+  if (etapaV(a) !== 'aprovado') return final(a) ? ['', 'Sem bônus'] : ['', 'Em seleção'];
+  const ini = (a.proposta && a.proposta.inicio) || ((a.decisao || {}).em || '').slice(0, 10); if (!ini) return ['warn', 'Aprovado'];
+  const lib = new Date(ini + 'T12:00'); lib.setDate(lib.getDate() + dias);
+  return lib <= new Date() ? ['pri', 'Bônus liberado para pagar'] : ['warn', `Bônus libera em ${lib.toLocaleDateString('pt-BR')}`];
+}
+function vIndicacoes(el) {
+  const apps = S.d.apps.filter(a => a.indicacao && !a.anonimizado).sort((a, b) => (b.criadoEm || '').localeCompare(a.criadoEm || '')), ed = ehEditor();
+  const cont = cod => { const l = apps.filter(a => a.indicacao.cod === cod); return [l.length, l.filter(a => etapaV(a) === 'aprovado').length]; };
+  const ids = S.d.ind.slice().sort((a, b) => a.nome.localeCompare(b.nome)), bonus = num(S.emp.bonusIndicacao), aPagar = apps.filter(a => statusBonus(a)[0] === 'pri').length;
+  el.innerHTML = `<section class="panel"><div class="row" style="gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><h2 style="margin:0 0 4px">Programa de indicação</h2><p class="hint" style="margin:0">Cadastre quem pode indicar, envie o link pessoal e acompanhe quem foi contratado.${bonus ? ` Bônus atual: <b>R$ ${bonus.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b> após ${S.emp.bonusDias || 90} dias do contratado.` : ''}</p></div>
+      ${ehAdmin() ? '<button class="btn sec" id="in-cfg">Regras do bônus</button>' : ''}${ed ? '<button class="btn" id="in-n">Novo indicador</button>' : '<button class="btn" id="in-eu">Meu link de indicação</button>'}</div></section>
+    <div class="kpis" style="margin-bottom:14px"><div class="kpi"><b>${ids.length}</b><span>indicadores</span></div><div class="kpi"><b>${apps.length}</b><span>candidatos indicados</span></div><div class="kpi"><b>${apps.filter(a => etapaV(a) === 'aprovado').length}</b><span>contratados por indicação</span></div><div class="kpi"><b>${aPagar}</b><span>bônus para pagar</span></div></div>
+    <section class="panel"><h2 style="margin-bottom:10px">Indicadores</h2>${ids.length ? `<div class="tbl-wrap"><table><thead><tr><th>Nome</th><th>Setor ou loja</th><th>Código</th><th class="n">Indicados</th><th class="n">Contratados</th><th></th></tr></thead><tbody>${ids.map(x => { const [n, c] = cont(x.id); return `<tr><td><b>${esc(x.nome)}</b>${x.telefone ? `<div class="hint">${esc(x.telefone)}</div>` : ''}</td><td>${esc(x.setor || '')}</td><td><code>${esc(x.id)}</code></td><td class="n">${n}</td><td class="n">${c}</td><td class="n" style="white-space:nowrap"><button class="btn sec sm" data-il="${x.id}">Link</button>${ed ? ` <button class="btn ghost sm" data-ix="${x.id}" aria-label="Remover ${esc(x.nome)}">Remover</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="hint" style="margin:0">Nenhum indicador ainda. Cadastre os funcionários que podem indicar e mande o link pessoal de cada um.</p>'}</section>
+    <section class="panel"><h2 style="margin-bottom:10px">Candidatos indicados</h2>${apps.length ? `<div class="tbl-wrap"><table><thead><tr><th>Candidato</th><th>Vaga</th><th>Indicado por</th><th>Etapa</th><th>Bônus</th><th></th></tr></thead><tbody>${apps.map(a => { const sb = statusBonus(a); return `<tr><td><button class="btn ghost sm" style="padding-left:0" data-ab="${a.id}">${esc(nomeVis(a))}</button></td><td>${esc(vagaDe(a.vagaId).titulo || a.vagaTitulo || '')}</td><td>${esc(nomeInd(a.indicacao.cod) || a.indicacao.nome || a.indicacao.cod || '')}</td><td>${esc(ETAPA[etapaV(a)] || etapaV(a))}</td><td><span class="pill ${sb[0]}">${sb[1]}</span></td><td class="n">${ed && sb[0] === 'pri' ? `<button class="btn sm" data-bp="${a.id}">Marcar como pago</button>` : ''}</td></tr>`; }).join('')}</tbody></table></div>` : '<p class="hint" style="margin:0">Quando alguém se candidatar por um link de indicação, aparece aqui.</p>'}</section>`;
+  const n = $('#in-n', el); if (n) n.onclick = () => modal('Novo indicador', `<div class="fld"><label for="ni-n">Nome do funcionário</label><input class="inp" id="ni-n"></div><div class="fld"><label for="ni-t">WhatsApp</label><input class="inp" id="ni-t" type="tel"></div><div class="fld"><label for="ni-s">Setor ou loja</label><input class="inp" id="ni-s"></div>`,
+    { size: 'sm', foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="ni-ok">Criar link</button>', onMount: m => $('#ni-ok', m).onclick = async () => { const nm = $('#ni-n', m).value.trim(); if (nm.length < 2) return toast('Informe o nome.', true);
+      const cod = codInd(), d = { nome: nm, telefone: $('#ni-t', m).value.trim(), setor: $('#ni-s', m).value.trim(), porUid: S.user.uid, criadoEm: agora() };
+      try { await sub(S.eid, 'indicadores').doc(cod).set(d); log(`Cadastrou ${nm} como indicador`); closeModal(); setTimeout(() => modalLinkInd({ id: cod, ...d }), 200); } catch (er) { toast(msgErro(er), true); } } });
+  const eu = $('#in-eu', el); if (eu) eu.onclick = () => meuLinkIndicacao(S.d.ind.find(x => x.porUid === S.user.uid && x.proprio));
+  const cf = $('#in-cfg', el); if (cf) cf.onclick = () => modal('Regras do bônus de indicação', `<div class="fld"><label for="bi-v">Valor do bônus (R$, deixe 0 para não pagar bônus)</label><input class="inp" id="bi-v" inputmode="decimal" value="${String(num(S.emp.bonusIndicacao) || 0).replace('.', ',')}"></div><div class="fld"><label for="bi-d">Pagar depois de quantos dias do contratado na empresa</label><input class="inp" type="number" min="0" id="bi-d" value="${S.emp.bonusDias || 90}"></div><p class="hint">O valor aparece para quem recebe o link de indicação.</p>`,
+    { size: 'sm', foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="bi-ok">Salvar</button>', onMount: m => $('#bi-ok', m).onclick = async () => { await emp(S.eid).update({ bonusIndicacao: num($('#bi-v', m).value), bonusDias: Math.max(0, parseInt($('#bi-d', m).value) || 0) }); log('Atualizou as regras do bônus de indicação'); closeModal(); toast('Regras salvas.'); } });
+  $$('[data-il]', el).forEach(b => b.onclick = () => modalLinkInd(S.d.ind.find(x => x.id === b.dataset.il)));
+  $$('[data-ix]', el).forEach(b => b.onclick = async () => { const x = S.d.ind.find(y => y.id === b.dataset.ix); if (!confirm(`Remover ${x.nome}? Os candidatos já indicados continuam marcados.`)) return; await sub(S.eid, 'indicadores').doc(x.id).delete(); log(`Removeu o indicador ${x.nome}`); });
+  $$('[data-ab]', el).forEach(b => b.onclick = () => abrirCand(b.dataset.ab));
+  $$('[data-bp]', el).forEach(b => b.onclick = async () => { const a = S.d.apps.find(x => x.id === b.dataset.bp); await sub(S.eid, 'apps').doc(a.id).update({ bonusPago: { em: agora(), por: S.me.nome, valor: num(S.emp.bonusIndicacao) } }); log(`Marcou como pago o bônus da indicação de ${a.perfil.nome}`); toast('Bônus marcado como pago.'); });
+}
+/* ---------- Ficha: indicação e opinião do gerente ---------- */
+function fichaExtrasL2(m, a, pv) {
+  const b = $('.modal-b', m); if (!b || $('#cd-l2', m)) return; let h = '';
+  if (a.indicacao) h += `<div class="pill pri" style="margin-right:6px">Indicado por ${esc(nomeInd(a.indicacao.cod) || a.indicacao.nome || a.indicacao.cod)}</div>`;
+  const g = (pv || privDe(a.id)).gerente; if (g) h += `<div class="panel" style="padding:10px 14px;margin:8px 0 0;border-color:var(--${VOTO_G[g.voto][0]})"><b>Opinião do gerente ${esc(g.por)}:</b> <span class="pill ${VOTO_G[g.voto][0]}">${VOTO_G[g.voto][1]}</span>${g.obs ? `<div style="margin-top:4px">${esc(g.obs)}</div>` : ''}<div class="hint">${fdt(g.em)}</div></div>`;
+  if (a.enviadoRH) h += `<div class="hint" style="margin-top:6px">Admissão enviada ao NEXUM RH em ${fdt(a.enviadoRH.em)}${a.enviadoRH.cpf ? ' (com os dados da proposta aceita)' : ''}.</div>`;
+  if (h) b.insertAdjacentHTML('afterbegin', `<div id="cd-l2" style="margin-bottom:12px">${h}</div>`);
+}
+/* ---------- Integração: aprovado vira admissão no NEXUM RH ---------- */
+function payloadRH(a) {
+  const v = vagaDe(a.vagaId), p = a.perfil || {}, pr = a.proposta || {}, r = a.propostaResp && a.propostaResp.status === 'aceita' ? a.propostaResp : {};
+  const sal = num(pr.salario) || parseFloat(String(v.salario || '').replace(/[^\d,]/g, '').replace(',', '.')) || 0, s = (x, n = 300) => String(x || '').slice(0, n);
+  return { nome: s(r.nome || p.nome, 160), cpf: s(r.cpf, 20), pix: s(r.pix, 160), email: s(p.email, 160), telefone: s(p.telefone, 30), cidade: s(p.cidade, 80),
+    cargo: s(pr.cargo || v.titulo || a.vagaTitulo, 120), area: s(v.area, 80), contrato: s(pr.contrato || v.contrato, 40), salario: sal, local: s(pr.local || v.local, 120),
+    inicio: s(pr.inicio, 10), horario: s(pr.horario, 200), beneficios: s(pr.beneficios, 600), exame: s(pr.exame && pr.exame.data ? `${pr.exame.data}${pr.exame.local ? ' · ' + pr.exame.local : ''}` : '', 200),
+    resumo: s(p.resumo, 1200), indicacao: s(a.indicacao ? (nomeInd(a.indicacao.cod) || a.indicacao.nome || '') : '', 120), docs: (a.docsRecebidos || []).length,
+    aprovadoEm: s((a.decisao || {}).em || agora(), 40), aprovadoPor: s((a.decisao || {}).por || S.me.nome, 120), empresaRS: s(S.emp.nome, 160), appRef: s(S.eid + '/' + a.id, 200) };
+}
+async function enviarRH(a, manual) {
+  const c = S.rh || {}; if (!c.tid || !c.token) { if (manual) { toast('Conecte o NEXUM RH em Configurações > NEXUM RH. Por enquanto, baixamos o arquivo.'); exportarAdmissao(a); } return false; }
+  if (!(await supConectar())) { if (manual) toast('Não foi possível conectar ao NEXUM RH agora.', true); return false; }
+  const id = (S.eid + '_' + a.id).replace(/[^A-Za-z0-9_-]/g, '').slice(0, 140), d = { id, token: c.token, status: 'novo', origem: 'recrutamento', recebidoEm: agora(), ...payloadRH(a) };
+  try { await SUP.db.doc(`tenants/${c.tid}/admRec/${id}`).set(d);
+    await sub(S.eid, 'apps').doc(a.id).update({ enviadoRH: { em: agora(), tid: c.tid, cpf: !!d.cpf }, historico: [...(a.historico || []), { t: d.cpf ? 'Dados da proposta aceita enviados ao NEXUM RH' : 'Enviado para admissão no NEXUM RH', em: agora(), por: (S.me && S.me.nome) || 'automático' }] });
+    log(`${manual ? 'Enviou' : 'Enviou automaticamente'} ${d.nome} para admissão no NEXUM RH`); if (manual) toast('Pronto! A admissão apareceu no NEXUM RH, em Admissão.'); return true; }
+  catch (er) { console.warn('[RS→RH]', er); if (manual) toast(er && er.code === 'permission-denied' ? 'O NEXUM RH recusou: confira o código da empresa e a chave em Configurações > NEXUM RH (ou a admissão já foi aberta lá).' : msgErro(er), true); return false; }
+}
+S.rhFeitos = new Set();
+function autoRH() {
+  if (!ehEditor() || !S.rh || !S.rh.auto || !S.rh.tid || !S.rh.token) return; const lim = new Date(Date.now() - 15 * 864e5).toISOString();
+  S.d.apps.forEach(a => { if (etapaV(a) !== 'aprovado' || S.rhFeitos.has(a.id)) return; const aceita = a.propostaResp && a.propostaResp.status === 'aceita';
+    const precisa = (!a.enviadoRH && ((a.decisao || {}).em || '') >= lim && (a.decisao || {}).em >= (S.rh.desde || '')) || (a.enviadoRH && !a.enviadoRH.cpf && aceita);
+    if (precisa) { S.rhFeitos.add(a.id); enviarRH(a, false).then(ok => { if (!ok) setTimeout(() => S.rhFeitos.delete(a.id), 120000); }); } });
+}
+function cfgRH(w) {
+  const c = S.rh || {};
+  w.innerHTML = `<section class="panel"><h2 style="margin-bottom:6px">Aprovado vira admissão no NEXUM RH</h2><p class="hint" style="margin-top:0">Quando você aprovar um candidato, ele aparece sozinho no NEXUM RH, em <b>Admissão &gt; Aprovados no Recrutamento</b>, com cargo, salário e contato. Se ele aceitar a carta-proposta depois, o CPF, o PIX e a data de início vão junto.</p>
+    <ol class="hint" style="margin:0 0 12px;padding-left:18px"><li>No NEXUM RH, abra <b>Admissão</b> e clique em <b>Conectar ao Recrutamento</b>.</li><li>Copie o código da empresa e a chave e cole aqui.</li></ol>
+    <div class="grid"><div class="fld"><label for="rh-t">Código da empresa no NEXUM RH</label><input class="inp" id="rh-t" value="${esc(c.tid || '')}" autocomplete="off"></div><div class="fld"><label for="rh-k">Chave de integração</label><input class="inp" id="rh-k" value="${esc(c.token || '')}" autocomplete="off"></div></div>
+    <label class="row hint" style="gap:8px;margin:6px 0 12px"><input type="checkbox" id="rh-a" ${c.auto !== false ? 'checked' : ''}> Enviar os aprovados automaticamente</label>
+    <div class="row end"><span class="hint" style="flex:1">${c.tid ? `Conectado à empresa ${esc(c.tid)}${c.em ? ' desde ' + fd(c.em) : ''}.` : 'Ainda não conectado.'}</span>${c.tid ? '<button class="btn sec" id="rh-x">Desconectar</button>' : ''}<button class="btn" id="rh-ok">Salvar e testar</button></div></section>`;
+  $('#rh-ok', w).onclick = async () => { const tid = $('#rh-t', w).value.trim().toLowerCase().replace(/[^a-z0-9_-]/g, ''), token = $('#rh-k', w).value.trim().replace(/\s/g, ''); if (!tid || token.length < 16) return toast('Cole o código da empresa e a chave do NEXUM RH.', true);
+    const b = $('#rh-ok', w); b.disabled = true;
+    try { if (!(await supConectar())) throw new Error('sem conexão'); const id = 'teste_' + S.eid.replace(/[^A-Za-z0-9]/g, '').slice(0, 40);
+      await SUP.db.doc(`tenants/${tid}/admRec/${id}`).set({ id, token, status: 'novo', origem: 'recrutamento', recebidoEm: agora(), nome: 'Teste de conexão do Recrutamento', teste: true, empresaRS: S.emp.nome || '' });
+      await sub(S.eid, 'config').doc('rh').set({ tid, token, auto: $('#rh-a', w).checked, em: c.em || agora(), desde: c.desde || agora(), por: S.me.nome }); log('Conectou o NEXUM RH'); toast('Conectado! Um aviso de teste apareceu no NEXUM RH.'); }
+    catch (er) { b.disabled = false; toast(er && er.code === 'permission-denied' ? 'O NEXUM RH recusou o código ou a chave. Confira e tente de novo.' : 'Não foi possível conectar: ' + (er.code || er.message), true); } };
+  const x = $('#rh-x', w); if (x) x.onclick = async () => { if (!confirm('Desconectar do NEXUM RH? Os próximos aprovados não serão enviados.')) return; await sub(S.eid, 'config').doc('rh').delete(); log('Desconectou o NEXUM RH'); toast('Desconectado.'); setTimeout(() => cfgRH(w), 300); };
+}
+/* ---------- CSS da tela do gerente ---------- */
+document.head.insertAdjacentHTML('beforeend', `<style>
+.gl-hero{display:flex;gap:16px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.gl-acoes{display:flex;gap:10px;flex-wrap:wrap}.gl-b{display:inline-flex;align-items:center;gap:8px;padding:14px 18px;font-size:15px}.gl-b svg{width:20px;height:20px}
+.gl-cands{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}.gl-c{border:1px solid var(--line);border-radius:14px;padding:14px;background:#fff}
+.gl-2{display:grid;grid-template-columns:1fr 1fr;gap:14px}.gl-2 .panel{margin-bottom:14px}
+@media(max-width:760px){.gl-2{grid-template-columns:1fr}.gl-acoes{width:100%}.gl-b{flex:1;justify-content:center}.gl-cands{grid-template-columns:1fr}}
+</style>`);
+
+/* ---------- Novidades publicadas pelo NEXUM (Painel do Dono) ---------- */
+async function novidadesRS() {
+  try { const r = await fetch('https://firestore.googleapis.com/v1/projects/nexum-30044/databases/(default)/documents/novidades?pageSize=50&key=' + SUP_FB_CFG.apiKey); if (!r.ok) return;
+    const v = f => !f ? null : 'stringValue' in f ? f.stringValue : 'booleanValue' in f ? f.booleanValue : 'arrayValue' in f ? (f.arrayValue.values || []).map(v) : null;
+    const l = ((await r.json()).documents || []).map(d => { const f = d.fields || {}; return { id: d.name.split('/').pop(), titulo: v(f.titulo) || '', texto: v(f.texto) || '', em: v(f.em) || '', sistemas: v(f.sistemas) || [], publicado: v(f.publicado) }; })
+      .filter(n => n.publicado !== false && n.sistemas.includes('recrutamento')).sort((a, b) => b.em.localeCompare(a.em));
+    const k = 'rs:novid:' + S.user.uid, vistos = JSON.parse(localStorage.getItem(k) || 'null'); localStorage.setItem(k, JSON.stringify(l.map(n => n.id))); if (!vistos) return;
+    const novos = l.filter(n => !vistos.includes(n.id)); if (!novos.length) return;
+    setTimeout(() => { if ($('#modal-root') && $('#modal-root').innerHTML.trim()) return; modal(novos.length > 1 ? 'Novidades no Recrutamento' : 'Novidade no Recrutamento', novos.slice(0, 5).map(n => `<article style="padding:10px 0;border-bottom:1px solid var(--line)"><b>${esc(n.titulo)}</b><p style="margin:6px 0 0;line-height:1.55;white-space:pre-wrap">${esc(n.texto)}</p></article>`).join(''), { foot: '<button class="btn" data-close>Entendi</button>' }); }, 2500);
+  } catch (e) { }
+}
+
+/* =====================================================================
+   LOJAS DAS VAGAS: o candidato vê o nome da loja e a foto da vaga;
+   o endereço fica guardado e só o recrutador envia, no fim do processo.
+   ===================================================================== */
+const lojaDe = id => (S.d.lojas || []).find(l => l.id === id);
+function fotoVaga(file) {
+  return new Promise((ok, err) => { if (!/^image\//.test(file.type)) return err(new Error('Escolha uma imagem (JPG, PNG ou WEBP).')); const r = new FileReader(); r.onerror = err; r.onload = () => { const im = new Image(); im.onerror = () => err(new Error('Imagem inválida.')); im.onload = () => {
+    const W = 1200, H = 630, c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d'), esc2 = Math.max(W / im.width, H / im.height), w = im.width * esc2, h = im.height * esc2; g.fillStyle = '#fff'; g.fillRect(0, 0, W, H); g.drawImage(im, (W - w) / 2, (H - h) / 2, w, h);
+    let q = .8, u = c.toDataURL('image/jpeg', q); while (u.length > 260000 && q > .4) { q -= .1; u = c.toDataURL('image/jpeg', q); } ok(u); }; im.src = r.result; }; r.readAsDataURL(file); });
+}
+function formLojaRS(l, depois) {
+  modal(l ? `Loja: ${l.nome}` : 'Nova loja', `<div class="grid"><div class="fld full"><label for="lj-n">Nome da loja (aparece para o candidato)</label><input class="inp" id="lj-n" value="${esc(l ? l.nome : '')}" placeholder="Ex.: Loja Shopping Catuaí"></div>
+      <div class="fld"><label for="lj-c">Cidade / bairro (aparece para o candidato)</label><input class="inp" id="lj-c" value="${esc(l ? l.cidade || '' : S.emp.cidade || '')}" placeholder="Ex.: Foz do Iguaçu - Centro"></div><div class="fld"><label for="lj-g">Gerente da loja</label><input class="inp" id="lj-g" value="${esc(l ? l.gerente || '' : '')}"></div>
+      <div class="fld full"><label for="lj-e">Endereço completo (só o recrutador vê)</label><input class="inp" id="lj-e" value="${esc(l ? l.endereco || '' : '')}" placeholder="Rua, número, ponto de referência"></div>
+      <div class="fld"><label for="lj-t">Telefone da loja (só o recrutador vê)</label><input class="inp" id="lj-t" value="${esc(l ? l.telefone || '' : '')}"></div><div class="fld"><label for="lj-h">Horário para se apresentar</label><input class="inp" id="lj-h" value="${esc(l ? l.horario || '' : '')}" placeholder="Ex.: de segunda a sexta, das 9h às 11h"></div></div>
+      <p class="hint">O endereço não aparece no site de vagas. Você envia ao candidato pelo botão "Enviar endereço da loja", na ficha dele, quando chegar a hora de falar com o gerente.</p>`,
+    { foot: `${l ? '<button class="btn ghost" id="lj-x" style="color:var(--bad);margin-right:auto">Excluir</button>' : ''}<button class="btn sec" data-close>Cancelar</button><button class="btn" id="lj-ok">Salvar loja</button>`, onMount: m => {
+      $('#lj-ok', m).onclick = async () => { const n = $('#lj-n', m).value.trim(); if (n.length < 2) return toast('Informe o nome da loja.', true);
+        const d = { nome: n, cidade: $('#lj-c', m).value.trim(), gerente: $('#lj-g', m).value.trim(), endereco: $('#lj-e', m).value.trim(), telefone: $('#lj-t', m).value.trim(), horario: $('#lj-h', m).value.trim(), atualizadoEm: agora() };
+        try { let id = l && l.id; if (id) await sub(S.eid, 'lojas').doc(id).set(d, { merge: true }); else { const r = await sub(S.eid, 'lojas').add({ ...d, criadoEm: agora() }); id = r.id; }
+          if (l) { const vs = S.d.vagas.filter(v => v.lojaId === l.id && (v.loja !== n || v.lojaCidade !== d.cidade)); for (const v of vs) await sub(S.eid, 'vagas').doc(v.id).update({ loja: n, lojaCidade: d.cidade }); }
+          log(`${l ? 'Editou' : 'Cadastrou'} a loja ${n}`); closeModal(); toast('Loja salva.'); depois && depois(id); } catch (er) { toast(msgErro(er), true); } };
+      const x = $('#lj-x', m); if (x) x.onclick = async () => { if (S.d.vagas.some(v => v.lojaId === l.id && v.status === 'aberta')) return toast('Há vagas abertas nesta loja. Feche ou mude a loja delas antes.', true); if (!confirm(`Excluir a loja ${l.nome}?`)) return; await sub(S.eid, 'lojas').doc(l.id).delete(); log(`Excluiu a loja ${l.nome}`); closeModal(); depois && depois(); }; } });
+}
+function cfgLojas(w) {
+  const l = (S.d.lojas || []).slice().sort((a, b) => a.nome.localeCompare(b.nome));
+  w.innerHTML = `<section class="panel"><div class="panel-head" style="margin-bottom:6px"><h2 style="flex:1">Lojas</h2><button class="btn" id="lj-n2">Nova loja</button></div><p class="hint" style="margin-top:0">O candidato vê o nome da loja e a cidade. O endereço, o telefone e o gerente ficam só aqui, para você enviar no fim do processo.</p>
+    ${l.length ? `<ul class="list">${l.map(x => `<li><div class="t"><div><b>${esc(x.nome)}</b>${x.cidade ? ' · ' + esc(x.cidade) : ''}</div><div>${esc(x.endereco || 'sem endereço')}${x.gerente ? ' · gerente ' + esc(x.gerente) : ''} · ${S.d.vagas.filter(v => v.lojaId === x.id && v.status === 'aberta').length} vaga(s) aberta(s)</div></div><button class="btn ghost sm" data-lje="${x.id}">Editar</button></li>`).join('')}</ul>` : '<p class="hint" style="margin:0">Nenhuma loja cadastrada.</p>'}</section>`;
+  $('#lj-n2', w).onclick = () => formLojaRS(null, () => setTimeout(() => cfgLojas(w), 400));
+  $$('[data-lje]', w).forEach(b => b.onclick = () => formLojaRS(lojaDe(b.dataset.lje), () => setTimeout(() => cfgLojas(w), 400)));
+}
+/* acrescenta loja e foto ao formulário da vaga */
+function ligarFormVagaLoja(m, v) {
+  const lf = $('#v-l', m); if (!lf || $('#v-lj', m)) return; const fl = lf.closest('.fld'); $('label', fl).textContent = 'Cidade / bairro (aparece para o candidato)';
+  if (!v || !v.id) lf.value = '';
+  fl.insertAdjacentHTML('beforebegin', `<div class="fld"><label for="v-lj">Loja (aparece para o candidato)</label><div class="row" style="gap:6px"><select class="inp" id="v-lj" style="flex:1"></select><button type="button" class="btn sec sm" id="v-ljn">+ Loja</button></div></div>`);
+  const sel = $('#v-lj', m), pinta = id => { sel.innerHTML = opts([['', 'Sem loja definida'], ...(S.d.lojas || []).slice().sort((a, b) => a.nome.localeCompare(b.nome)).map(l => [l.id, l.nome])], id || ''); };
+  pinta(v && v.lojaId); sel.onchange = () => { const l = lojaDe(sel.value); if (l && l.cidade && !lf.value.trim()) lf.value = l.cidade; };
+  fl.insertAdjacentHTML('afterend', `<div class="fld full" id="v-ljf" hidden><div class="vf-box"><b>Nova loja</b><div class="grid" style="margin-top:8px"><div class="fld"><label for="nl-n">Nome da loja</label><input class="inp" id="nl-n" placeholder="Ex.: Loja Shopping Catuaí"></div><div class="fld"><label for="nl-c">Cidade / bairro</label><input class="inp" id="nl-c" value="${esc(S.emp.cidade || '')}"></div><div class="fld full"><label for="nl-e">Endereço completo (só o recrutador vê)</label><input class="inp" id="nl-e"></div><div class="fld"><label for="nl-g">Gerente</label><input class="inp" id="nl-g"></div><div class="fld"><label for="nl-h">Horário para se apresentar</label><input class="inp" id="nl-h"></div></div><p class="hint" style="margin:0">A loja é criada junto com a vaga.</p></div></div>`);
+  $('#v-ljn', m).onclick = () => { const b = $('#v-ljf', m); b.hidden = !b.hidden; if (!b.hidden) { sel.value = ''; $('#nl-n', m).focus(); } };
+  const grid = $('.grid', m); grid.insertAdjacentHTML('beforeend', `<div class="fld full"><span class="lbl">Foto da vaga (aparece no site de vagas)</span><div class="vf-box"><div class="vf-prev" id="vf-p">${v && v.foto ? `<img src="${v.foto}" alt="Foto da vaga">` : '<span class="hint">Sem foto</span>'}</div><div class="row" style="gap:6px;flex-wrap:wrap"><label class="btn sec sm" style="cursor:pointer">Escolher foto<input type="file" id="vf-f" accept="image/*" hidden></label><button type="button" class="btn ghost sm" id="vf-x" ${v && v.foto ? '' : 'hidden'}>Remover</button></div><p class="hint" style="margin:6px 0 0">Use uma foto da loja, da equipe ou um banner da vaga. Ela é ajustada para 1200 × 630.</p></div></div>`);
+  m._foto = v && v.foto ? v.foto : '';
+  $('#vf-f', m).onchange = async e => { const f = e.target.files[0]; if (!f) return; try { m._foto = await fotoVaga(f); $('#vf-p', m).innerHTML = `<img src="${m._foto}" alt="Foto da vaga">`; $('#vf-x', m).hidden = false; } catch (er) { toast(er.message, true); } };
+  $('#vf-x', m).onclick = () => { m._foto = ''; $('#vf-p', m).innerHTML = '<span class="hint">Sem foto</span>'; $('#vf-x', m).hidden = true; };
+}
+/* ao salvar a vaga: cria a loja nova (se preenchida) e devolve os campos de loja e foto */
+async function prepLoja(m) {
+  const sel = $('#v-lj', m); if (!sel) return {}; let l = lojaDe(sel.value); const nf = $('#v-ljf', m);
+  if (nf && !nf.hidden && $('#nl-n', m).value.trim()) { const d = { nome: $('#nl-n', m).value.trim(), cidade: $('#nl-c', m).value.trim(), endereco: $('#nl-e', m).value.trim(), gerente: $('#nl-g', m).value.trim(), horario: $('#nl-h', m).value.trim(), telefone: '', criadoEm: agora(), atualizadoEm: agora() };
+    try { const r = await sub(S.eid, 'lojas').add(d); l = { id: r.id, ...d }; log(`Cadastrou a loja ${d.nome}`); } catch (er) { toast(msgErro(er), true); return false; } }
+  return { lojaId: l ? l.id : '', loja: l ? l.nome : '', lojaCidade: l ? l.cidade || '' : '', foto: m._foto || '' };
+}
+/* ---------- Enviar o endereço da loja ao candidato (só no fim do processo) ---------- */
+function enviarEnderecoLoja(a) {
+  const v = vagaDe(a.vagaId), l = lojaDe(v.lojaId); if (!l) return toast('Esta vaga não tem loja cadastrada. Edite a vaga e escolha a loja.', true);
+  if (!l.endereco) return formLojaRS(l, () => toast('Endereço salvo. Clique de novo em "Enviar endereço da loja".'));
+  const nome = primeiro(a.perfil.nome), padrao = `Olá, ${nome}! Parabéns por chegar até aqui no processo para ${v.titulo || a.vagaTitulo}.\n\nA próxima etapa é conversar com ${l.gerente ? `o(a) gerente ${l.gerente}` : 'o(a) gerente'} na ${l.nome}.\nEndereço: ${l.endereco}${l.horario ? `\nQuando ir: ${l.horario}` : ''}\n\nLeve um documento com foto e diga que veio pelo processo seletivo da ${S.emp.nome || 'empresa'}. Qualquer dúvida, responda por aqui.`;
+  modal('Enviar endereço da loja', `<p class="hint" style="margin-top:0">O endereço só aparece para o candidato agora. A mensagem vai para o portal dele e você pode mandar também pelo WhatsApp.</p><div class="fld"><label for="el-m">Mensagem</label><textarea class="inp" id="el-m" style="min-height:220px">${esc(padrao)}</textarea></div>`,
+    { foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="el-ok">Enviar ao candidato</button>', onMount: m => $('#el-ok', m).onclick = async () => { const t = $('#el-m', m).value.trim(); if (t.length < 10) return toast('Escreva a mensagem.', true);
+      try { await sub(S.eid, 'apps').doc(a.id).update({ mensagens: [...(a.mensagens || []), { de: 'rh', t, por: S.me.nome, em: agora() }], enderecoEnviado: { em: agora(), por: S.me.nome, loja: l.nome }, historico: [...(a.historico || []), { t: `Endereço da ${l.nome} enviado ao candidato`, em: agora(), por: S.me.nome }], atualizadoEm: agora() });
+        log(`Enviou o endereço da ${l.nome} para ${a.perfil.nome}`); closeModal(); const w = waLink(a.perfil.telefone, t);
+        modal('Endereço enviado', `<p style="margin:0">A mensagem já está no portal do candidato.${w ? ' Quer mandar também pelo WhatsApp?' : ''}</p>`, { size: 'sm', foot: `<button class="btn sec" data-close>Fechar</button>${w ? `<a class="btn" href="${w}" target="_blank" rel="noopener">Enviar no WhatsApp</a>` : ''}` }); }
+      catch (er) { toast(msgErro(er), true); } } });
+}
+function botaoEnderecoFicha(m, a) {
+  const f = $('.modal-f', m), v = vagaDe(a.vagaId), ev = etapaV(a); if (!f || !ehEditor() || !v.lojaId || $('#cd-end', m)) return;
+  if (!(ev === 'aprovado' || ev === 'entrevista' || String(ev).startsWith('x_'))) return;
+  f.insertAdjacentHTML('afterbegin', `<button class="btn sec" id="cd-end">${a.enderecoEnviado ? 'Reenviar endereço da loja' : 'Enviar endereço da loja'}</button>`); $('#cd-end', m).onclick = () => enviarEnderecoLoja(a);
+}
+document.head.insertAdjacentHTML('beforeend', `<style>.vf-box{border:1px dashed var(--line);border-radius:12px;padding:10px}.vf-prev{aspect-ratio:1200/630;max-width:360px;border-radius:10px;overflow:hidden;background:#F4F6FB;display:grid;place-items:center;margin-bottom:8px}.vf-prev img{width:100%;height:100%;object-fit:cover}</style>`);
+
+/* =====================================================================
+   SELEÇÃO TERCEIRIZADA PELA NEXUM: R$ 200 por candidato apresentado e
+   R$ 400 por candidato contratado. O pedido vai para o Painel do Dono.
+   ===================================================================== */
+const TERC = { porCandidato: 200, porContratado: 400 };
+function bannerTerc(el) {
+  if (!ehEditor() || $('#tc-b', el) || localStorage.getItem('rs:terc:oculto:' + S.eid)) return;
+  el.insertAdjacentHTML('afterbegin', `<section class="panel tc-ban" id="tc-b"><div class="tc-t"><b>Sem tempo para selecionar? A NEXUM faz por você.</b><span>Nossa equipe divulga, faz a triagem e as entrevistas e apresenta só quem tem perfil. <b>R$ ${TERC.porCandidato}</b> por candidato apresentado e <b>R$ ${TERC.porContratado}</b> por contratado, sem mensalidade.</span></div><button class="btn" id="tc-go">Contratar a seleção</button><button class="btn ghost sm" id="tc-x">Ocultar</button></section>`);
+  $('#tc-go', el).onclick = () => pedirTerc(); $('#tc-x', el).onclick = () => { localStorage.setItem('rs:terc:oculto:' + S.eid, '1'); $('#tc-b', el).remove(); toast('Aviso ocultado. Você pode contratar a seleção terceirizada em Configurações > Empresa.'); };
+}
+function pedirTerc(vagaPre) {
+  const abertas = S.d.vagas.filter(v => v.status === 'aberta');
+  modal('Seleção terceirizada pela NEXUM', `<p class="tc-pr"><b>R$ ${TERC.porCandidato}</b> por candidato apresentado · <b>R$ ${TERC.porContratado}</b> por candidato contratado. Sem mensalidade e sem fidelidade.</p>
+    <p class="hint" style="margin-top:0">A NEXUM publica a vaga com o nome da loja e a foto, faz a triagem e as entrevistas e apresenta os candidatos com parecer. O endereço da loja só é passado ao candidato aprovado, no fim, para falar com o gerente.</p>
+    <div class="fld"><span class="lbl">Quais vagas?</span>${abertas.length ? `<div class="tc-vs">${abertas.map(v => `<label class="row" style="gap:8px"><input type="checkbox" data-tv="${v.id}" ${vagaPre === v.id || abertas.length === 1 ? 'checked' : ''}> <span><b>${esc(v.titulo)}</b>${v.loja ? ' · ' + esc(v.loja) : ''}${v.qtd > 1 ? ` (${v.qtd})` : ''}</span></label>`).join('')}</div>` : '<p class="hint" style="margin:0">Você ainda não tem vaga aberta. Descreva abaixo o cargo, a loja e a quantidade.</p>'}</div>
+    <div class="grid"><div class="fld"><label for="tc-r">Responsável</label><input class="inp" id="tc-r" value="${esc(S.me.nome || '')}"></div><div class="fld"><label for="tc-w">WhatsApp</label><input class="inp" id="tc-w" type="tel" placeholder="(45) 99999-9999"></div>
+      <div class="fld"><label for="tc-cn">CNPJ</label><input class="inp" id="tc-cn" inputmode="numeric"></div><div class="fld"><label for="tc-ci">Cidade/UF</label><input class="inp" id="tc-ci" value="${esc(S.emp.cidade || '')}"></div>
+      <div class="fld full"><label for="tc-o">Outras vagas, horário e perfil desejado</label><textarea class="inp" id="tc-o" maxlength="1500"></textarea></div></div>
+    <label class="row" style="gap:8px;align-items:flex-start"><input type="checkbox" id="tc-ac" style="margin-top:4px"> <span class="hint">Concordo com R$ ${TERC.porCandidato} por candidato apresentado e R$ ${TERC.porContratado} por candidato contratado, cobrados após cada entrega.</span></label>`,
+    { size: 'lg', foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="tc-ok">Enviar pedido à NEXUM</button>', onMount: m => $('#tc-ok', m).onclick = async () => {
+      const vs = $$('[data-tv]:checked', m).map(x => vagaDe(x.dataset.tv)).map(v => ({ cargo: String(v.titulo || '').slice(0, 80), loja: String(v.loja || '').slice(0, 80), qtd: Math.max(1, +v.qtd || 1), salario: String(v.salario || '').slice(0, 40) })), obs = $('#tc-o', m).value.trim(), wa = $('#tc-w', m).value.replace(/\D/g, '');
+      if (!vs.length && obs.length < 5) return toast('Escolha uma vaga ou descreva a vaga nas observações.', true); if (wa.length < 10) return toast('Informe o WhatsApp com DDD.', true); if (!$('#tc-ac', m).checked) return toast('Aceite as condições para enviar.', true);
+      const b = $('#tc-ok', m); b.disabled = true;
+      try { if (!(await supConectar())) throw new Error('sem conexão'); const num = 'RS-' + Date.now().toString(36).toUpperCase().slice(-6), ag = agora();
+        await SUP.db.collection('rsTerceirizado').add({ numero: num, origem: 'recrutamento', eid: S.eid, empresa: (S.emp.nome || '').slice(0, 160), cnpj: $('#tc-cn', m).value.replace(/\D/g, '').slice(0, 14), responsavel: $('#tc-r', m).value.trim().slice(0, 120), whatsapp: wa.slice(0, 13), email: String(S.user.email || '').slice(0, 160), cidade: $('#tc-ci', m).value.trim().slice(0, 80), obs: obs.slice(0, 1500), vagas: vs.slice(0, 10), aceite: true, aceiteEm: ag, em: ag, status: 'novo' });
+        log(`Pediu a seleção terceirizada da NEXUM (${num})`); closeModal();
+        modal('Pedido enviado', `<p style="margin-top:0">Pedido <b>${num}</b> recebido. A equipe da NEXUM chama você no WhatsApp para alinhar o perfil e começar.</p><p class="hint" style="margin:0">Para a NEXUM trabalhar dentro do seu sistema, adicione em Equipe o e-mail que ela informar, com o papel Recrutador.</p>`, { size: 'sm', foot: '<button class="btn" data-close>Entendi</button>' }); }
+      catch (er) { b.disabled = false; toast('Não foi possível enviar: ' + (er.code || er.message), true); } } });
+}
+document.head.insertAdjacentHTML('beforeend', `<style>.tc-ban{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:linear-gradient(135deg,#F2F6FF,#fff);border-color:#C9D6F2}.tc-t{flex:1;min-width:260px;display:flex;flex-direction:column;gap:4px}.tc-t span{color:var(--mut);font-size:14px}.tc-pr{background:#EAF1FF;border-radius:10px;padding:10px 14px;margin-top:0}.tc-vs{display:flex;flex-direction:column;gap:6px;max-height:200px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:10px}</style>`);
+
+/* =====================================================================
+   LOTE 6 (recrutador): entrevista gravada em vídeo, busca no banco de
+   talentos com IA e alerta de quem não compareceu antes.
+   ===================================================================== */
+const PERG_GRAV = ['Fale um pouco sobre você e a sua experiência profissional.', 'Por que você quer trabalhar com a gente nesta vaga?', 'Conte um atendimento difícil que você teve e como resolveu.'];
+function pedirGravacao(a) {
+  const g = a.gravacao || {}, v = vagaDe(a.vagaId);
+  modal(`Entrevista gravada · ${a.perfil.nome}`, `<p class="hint" style="margin-top:0">O candidato grava as respostas pelo celular, no portal, e você assiste quando puder. Ótimo para a primeira conversa e para a seleção de muitos candidatos.</p>
+    ${[0, 1, 2].map(i => `<div class="fld"><label for="gv-${i}">Pergunta ${i + 1}${i ? ' (opcional)' : ''}</label><input class="inp" id="gv-${i}" value="${esc((g.perguntas || PERG_GRAV)[i] || '')}"></div>`).join('')}
+    <div class="grid"><div class="fld"><label for="gv-t">Tempo por resposta</label><select class="inp" id="gv-t">${opts([[30, '30 segundos'], [60, '1 minuto'], [90, '1 minuto e meio']], g.tempo || 60)}</select></div><div class="fld"><label for="gv-p">Responder até</label><input class="inp" type="date" id="gv-p" value="${g.prazo || iso(addD(new Date(), 3))}"></div></div>`,
+    { foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="gv-ok">Enviar ao candidato</button>', onMount: m => $('#gv-ok', m).onclick = async () => {
+      const pg = [0, 1, 2].map(i => $(`#gv-${i}`, m).value.trim()).filter(Boolean).slice(0, 3); if (!pg.length) return toast('Escreva ao menos uma pergunta.', true);
+      const gr = { perguntas: pg, tempo: +$('#gv-t', m).value, prazo: $('#gv-p', m).value, pedidoEm: agora(), por: S.me.nome }, t = `Olá, ${primeiro(a.perfil.nome)}! Para a vaga de ${v.titulo || a.vagaTitulo}, queremos conhecer você melhor: grave ${pg.length === 1 ? 'uma resposta curta' : pg.length + ' respostas curtas'} em vídeo pelo celular, no portal do candidato, até ${fd(gr.prazo)}. É rápido e você pode regravar.`;
+      try { await sub(S.eid, 'apps').doc(a.id).update({ gravacao: gr, mensagens: [...(a.mensagens || []), { de: 'rh', t, por: S.me.nome, em: agora() }], historico: [...(a.historico || []), { t: 'Pedido de entrevista gravada', em: agora(), por: S.me.nome }], atualizadoEm: agora() });
+        log(`Pediu entrevista gravada para ${a.perfil.nome}`); closeModal(); const w = waLink(a.perfil.telefone, t + ' ' + linkPortal(a.vagaId));
+        modal('Pedido enviado', `<p style="margin:0">O pedido já está no portal do candidato.${w ? ' Quer avisar também pelo WhatsApp?' : ''}</p>`, { size: 'sm', foot: `<button class="btn sec" data-close>Fechar</button>${w ? `<a class="btn" href="${w}" target="_blank" rel="noopener">Avisar no WhatsApp</a>` : ''}` }); } catch (er) { toast(msgErro(er), true); } } });
+}
+async function videosDe(a) {
+  const s = await sub(S.eid, 'videos').where('appId', '==', a.id).get(), pq = {};
+  s.docs.map(d => d.data()).forEach(d => { (pq[d.q] = pq[d.q] || { mime: d.mime, partes: [] }).partes[d.parte] = d.data; });
+  return Object.fromEntries(Object.entries(pq).map(([q, x]) => { const bin = atob(x.partes.join('')), u8 = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i); return [q, URL.createObjectURL(new Blob([u8], { type: x.mime || 'video/webm' }))]; }));
+}
+function painelGravacao(m, a) {
+  const g = a.gravacao, b = $('.modal-b', m); if (!g || !b || $('#gv-pn', m)) return; const resp = g.respostas || {}, n = Object.keys(resp).length;
+  b.insertAdjacentHTML('afterbegin', `<div class="panel" id="gv-pn" style="padding:12px 14px;border-color:${n ? 'var(--ok)' : 'var(--line)'}"><div class="row" style="gap:8px"><b style="flex:1">Entrevista gravada</b><span class="pill ${n ? 'ok' : 'warn'}">${n ? `${n} de ${g.perguntas.length} resposta(s)` : `aguardando até ${fd(g.prazo)}`}</span>${n ? '<button class="btn sm" id="gv-ver">Assistir</button>' : ''}</div><div id="gv-v"></div></div>`);
+  const ver = $('#gv-ver', m); if (ver) ver.onclick = async () => { ver.disabled = true; ver.textContent = 'Carregando…'; try { const urls = await videosDe(a);
+    $('#gv-v', m).innerHTML = g.perguntas.map((p, i) => `<div style="margin-top:10px"><b style="display:block;margin-bottom:4px">${i + 1}. ${esc(p)}</b>${urls[i] ? `<video src="${urls[i]}" controls playsinline style="width:100%;max-width:420px;border-radius:12px;background:#000"></video><div class="hint">${resp[i] && resp[i].duracao ? resp[i].duracao + ' s · ' : ''}enviada em ${fdt(resp[i] ? resp[i].em : '')}</div>` : '<span class="hint">Sem resposta.</span>'}</div>`).join(''); ver.remove(); }
+    catch (er) { ver.disabled = false; ver.textContent = 'Assistir'; toast(msgErro(er), true); } };
+}
+/* ---------- quem não compareceu antes ---------- */
+function chavesPessoa(a) { const p = a.perfil || {}, dg = v => String(v || '').replace(/\D/g, ''); return [a.candUid && 'u:' + a.candUid, p.email && 'e:' + String(p.email).toLowerCase(), dg(p.telefone).length >= 10 && 't:' + dg(p.telefone).slice(-10)].filter(Boolean); }
+function faltasDe(a) { const ks = new Set(chavesPessoa(a)); return S.d.ent.filter(e => e.status === 'falta').map(e => ({ e, ap: S.d.apps.find(x => x.id === e.appId) })).filter(x => x.ap && chavesPessoa(x.ap).some(k => ks.has(k))); }
+{ const _cc = cardCand; cardCand = function (a) { const h = _cc(a); try { const f = faltasDe(a); if (!f.length) return h; return h.replace('</button>', `<span class="pill bad" style="margin-top:4px">Faltou ${f.length > 1 ? f.length + ' entrevistas' : 'a uma entrevista'}</span></button>`); } catch (e) { return h; } }; }
+{ const _fx = fichaExtrasL2; fichaExtrasL2 = function (m, a, pv) { _fx(m, a, pv); try { painelGravacao(m, a); const f = faltasDe(a), b = $('.modal-b', m);
+  if (f.length && b && !$('#cd-falta', m)) b.insertAdjacentHTML('afterbegin', `<div id="cd-falta" style="border:1px solid #F2B8B5;background:#FDECEC;border-radius:12px;padding:10px 14px;margin-bottom:12px"><b>Não compareceu a ${f.length} entrevista(s)</b>${f.map(x => `<div class="hint">${fdt(x.e.inicio)} · ${esc(x.e.vagaTitulo || vagaDe(x.ap.vagaId).titulo || '')}</div>`).join('')}<div class="hint" style="margin-top:4px">Confirme a presença antes de marcar outra entrevista.</div></div>`);
+  const ft = $('.modal-f', m); if (ft && ehEditor() && !final(a) && !$('#cd-gv', m)) { ft.insertAdjacentHTML('afterbegin', `<button class="btn sec" id="cd-gv">${a.gravacao ? 'Entrevista gravada' : 'Pedir entrevista gravada'}</button>`); $('#cd-gv', m).onclick = () => pedirGravacao(a); } } catch (e) { console.warn(e); } }; }
+/* ---------- Busca no banco de talentos com IA ---------- */
+function buscaIABanco(el) {
+  if (!ehEditor() || $('#bi-p', el)) return;
+  el.insertAdjacentHTML('afterbegin', `<section class="panel" id="bi-p" style="background:linear-gradient(135deg,#F5F8FF,#fff);border-color:#C9D6F2"><div class="row" style="gap:8px;flex-wrap:wrap"><b style="flex:1;min-width:200px">Buscar com IA</b><input class="inp" id="bi-q" style="flex:3;min-width:240px" placeholder="Ex.: vendedor com experiência em celular, mora perto do Centro, disponível aos sábados"><button class="btn" id="bi-go">Buscar</button></div><div id="bi-r"></div></section>`);
+  $('#bi-q', el).onkeydown = e => { if (e.key === 'Enter') $('#bi-go', el).click(); };
+  $('#bi-go', el).onclick = async () => { const q = $('#bi-q', el).value.trim(); if (q.length < 4) return toast('Descreva o perfil que você procura.', true); const w = $('#bi-r', el);
+    const por = {}; S.d.apps.filter(a => !a.anonimizado && a.perfil).forEach(a => { const k = a.candUid || a.id; if (!por[k] || (a.atualizadoEm || a.criadoEm) > (por[k].atualizadoEm || por[k].criadoEm)) por[k] = a; });
+    const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase(), ps = norm(q).split(/[^a-z0-9]+/).filter(x => x.length > 2);
+    const txt = a => { const p = a.perfil; return norm([p.nome, p.cidade, p.resumo, (p.habilidades || []).join(' '), (p.experiencias || []).map(x => [x.cargo, x.empresa, x.descricao].join(' ')).join(' '), (p.formacao || []).map(x => x.curso).join(' '), a.vagaTitulo].join(' ')); };
+    const cands = Object.values(por).map(a => ({ a, s: ps.reduce((t, x) => t + (txt(a).includes(x) ? 1 : 0), 0) })).sort((x, y) => y.s - x.s).slice(0, 25);
+    if (!cands.length) { w.innerHTML = '<p class="hint" style="margin:10px 0 0">O banco ainda está vazio.</p>'; return; }
+    w.innerHTML = '<p class="hint" style="margin:10px 0 0">A IA está lendo os perfis…</p>';
+    const resumo = cands.map((x, i) => { const p = x.a.perfil; return `#${i} ${p.nome} | ${p.cidade || ''} | ${String(p.resumo || '').slice(0, 220)} | experiências: ${(p.experiencias || []).slice(0, 3).map(e => `${e.cargo || ''} em ${e.empresa || ''}`).join('; ')} | habilidades: ${(p.habilidades || []).slice(0, 8).join(', ')} | última vaga: ${x.a.vagaTitulo || ''} (${ETAPA[etapaV(x.a)] || ''})`; }).join('\n');
+    let lista = null; try { const r = await supIA([{ role: 'user', content: `Perfil procurado: ${q}\n\nCandidatos:\n${resumo}\n\nEscolha até 8 que mais combinam, do melhor para o pior. Responda só JSON: [{"i":número,"motivo":"uma frase curta"}]` }], 'Você é recrutador de varejo no Brasil. Avalie só experiência, habilidades, disponibilidade e localização informadas. Nunca use idade, gênero, aparência, religião, estado civil ou outro dado discriminatório. Responda apenas JSON válido.');
+      lista = JSON.parse(String(r).replace(/```json|```/g, '').match(/\[[\s\S]*\]/)[0]).filter(x => cands[x.i]); } catch (e) { lista = cands.filter(x => x.s > 0).slice(0, 8).map(x => ({ i: cands.indexOf(x), motivo: 'Combina com as palavras da busca' })); }
+    w.innerHTML = lista.length ? `<ul class="list" style="margin-top:10px">${lista.map((x, k) => { const a = cands[x.i].a; return `<li class="link" data-ab="${a.id}"><span class="pill pri">${k + 1}º</span><div class="t"><div><b>${esc(a.perfil.nome)}</b> · ${esc(a.perfil.cidade || '')}</div><div>${esc(x.motivo || '')}</div></div><button class="btn ghost sm">Ficha</button></li>`; }).join('')}</ul><p class="note" style="margin-bottom:0">Sugestão da IA a partir do que os candidatos escreveram. Confira a ficha antes de chamar.</p>` : '<p class="hint" style="margin:10px 0 0">Ninguém combina com essa busca.</p>';
+    $$('[data-ab]', w).forEach(x => x.onclick = () => abrirCand(x.dataset.ab)); };
+}
+
+/* =====================================================================
    SUPORTE NEXUM (chat no canto): atendimentos gravados no projeto do NEXUM RH,
    para aparecerem no Painel do Dono marcados como "Recrutamento".
    ===================================================================== */
@@ -1486,8 +1815,9 @@ async function supIA(msgs, sistema, soClaude) {
 function supSistema() {
   return `Você é o assistente de suporte do NEXUM Recrutamento e Seleção, sistema de recrutamento por assinatura (R$ 289 por mês, sem teste grátis) para empresas e redes de lojas no Brasil. Responda em português do Brasil, com frases curtas e passos numerados quando for um "como faço". Nunca invente recursos: se não souber, diga que não tem certeza e sugira o botão "Falar com atendente". Para pagamento, cobrança, acesso, erro técnico ou pedido de algo que o sistema não faz, sugira "Falar com atendente".
 Contexto: empresa ${(S.emp && S.emp.nome) || ''}; usuário ${(S.me && S.me.nome) || ''}, papel ${(S.me && S.me.role) || ''}.
-Menu lateral: Painel (funil, prazos das etapas, entrevistas do dia); Vagas (nova vaga, link da vaga, cartaz com QR code, modelos e duplicar, pedidos de vaga dos gerentes, etapas personalizadas); Candidatos (quadro por etapa: Inscrito, Triagem, Teste, Entrevista, Aprovado; arrastar o cartão muda a etapa; triagem às cegas; comparar candidatos; retorno em lote); Questionários (triagem, testes com correção automática e roteiros de entrevista; modelos prontos); Entrevistas (agendar, horários livres para o candidato escolher, Dia de entrevistas para marcar vários em sequência, sala de vídeo no navegador com até 4 pessoas, avaliação por critérios); Banco de talentos; Relatórios (funil, origem, tempo por etapa, experiência do candidato); Equipe (recrutadores e avaliadores); Configurações (Empresa, prazo de guarda e anonimização automática pela LGPD, página de carreiras com logo e fotos, mensagens padrão, Inteligência artificial com a chave do Groq da empresa).
+Menu lateral: Painel (funil, prazos das etapas, entrevistas do dia); Vagas (nova vaga, link da vaga, cartaz com QR code, modelos e duplicar, pedidos de vaga dos gerentes, etapas personalizadas); Candidatos (quadro por etapa: Inscrito, Triagem, Teste, Entrevista, Aprovado; arrastar o cartão muda a etapa; triagem às cegas; comparar candidatos; retorno em lote); Questionários (triagem, testes com correção automática e roteiros de entrevista; modelos prontos); Entrevistas (agendar, horários livres para o candidato escolher, Dia de entrevistas para marcar vários em sequência, sala de vídeo no navegador com até 4 pessoas, avaliação por critérios); Banco de talentos; Relatórios (funil, origem, tempo por etapa, experiência do candidato); Indicações (link pessoal de cada funcionário, bônus por contratado); Equipe (recrutadores, avaliadores e gerentes de loja, que veem uma tela simples "Minha loja" para pedir funcionário e dizer quem querem contratar); Configurações (NEXUM RH: código e chave para o aprovado virar admissão sozinho no RH; Empresa, prazo de guarda e anonimização automática pela LGPD, página de carreiras com logo e fotos, mensagens padrão, Inteligência artificial com a chave do Groq da empresa).
 Ficha do candidato: perfil, respostas e testes, entrevistas, avaliação, mensagens, referências, histórico, carta-proposta com aceite, CPF e PIX, e exportação para a admissão no NEXUM RH.
+Lojas (Configurações > Lojas): o candidato vê o nome da loja, a cidade e a foto da vaga; o endereço, o telefone e o gerente ficam escondidos e o recrutador envia pelo botão "Enviar endereço da loja" na ficha, no fim do processo. Seleção terceirizada pela NEXUM: R$ 200 por candidato apresentado e R$ 400 por contratado, sem mensalidade (botão "Contratar a seleção" em Vagas).
 Portal do candidato: lista de vagas, candidatura com conta ou candidatura rápida sem senha, testes, escolha de horário, entrada na sala de entrevista e acompanhamento das etapas.`;
 }
 function supRender() {
