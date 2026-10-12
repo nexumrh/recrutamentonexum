@@ -2007,7 +2007,7 @@ function supRender() {
     c.innerHTML = `<div class="sp-m bot"><span class="mini">${supN(18)}</span><div class="bb">Olá${S.me ? ', ' + esc(String(S.me.nome).split(' ')[0]) : ''}! Este é o suporte do NEXUM Recrutamento e Seleção. Toque em <b>Iniciar chat</b> para tirar dúvidas com o assistente ou falar com um atendente.</div></div><button class="sp-ini" data-sp="novo">Iniciar chat</button>${SUP.lista.length ? '<button class="sp-ini" data-sp="lista" style="border-color:#C9CFDB;font-weight:500">Meus atendimentos</button>' : ''}`; supEntrada(false); return; }
   $('.sp-h small', p).textContent = `Protocolo ${d.protocolo} · ${SUP_ST[d.status]}`;
   let dia = '', h = ''; (d.msgs || []).forEach(m => { const dd = new Date(m.em).toLocaleDateString('pt-BR'); if (dd !== dia) { dia = dd; h += `<div class="sp-dia">${dd}</div>`; }
-    h += `<div class="sp-m ${m.de}">${m.de !== 'rh' ? `<span class="mini">${supN(18)}</span>` : ''}<div class="bb">${m.de === 'dono' ? '<b style="display:block;font-size:12px;color:#1F5FE8">Atendente NEXUM</b>' : ''}${esc(m.t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}</div></div><div class="sp-hr">${supHora(m.em)}</div>`; });
+    h += `<div class="sp-m ${m.de}">${m.de !== 'rh' ? `<span class="mini">${supN(18)}</span>` : ''}<div class="bb">${m.de === 'dono' ? '<b style="display:block;font-size:12px;color:#1F5FE8">Atendente NEXUM</b>' : ''}${esc(m.t).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')}${m.pagamento && m.pagamento.fatura ? supPagCard(m.pagamento) : ''}</div></div><div class="sp-hr">${supHora(m.em)}</div>`; });
   const fechado = ['concluido', 'cancelado'].includes(d.status);
   if (SUP.dig) h += `<div class="sp-m bot"><span class="mini">${supN(18)}</span><div class="bb sp-dig"><i></i><i></i><i></i></div></div>`;
   else if (fechado) h += `<div class="sp-dia">Atendimento ${SUP_ST[d.status].toLowerCase()}.</div><button class="sp-ini" data-sp="novo">Iniciar novo chat</button>`;
@@ -2198,4 +2198,9 @@ function painelGraficos(el) {
 
 /* ---------- Início ---------- */
 if (iniciarFirebase('rs-recrutador')) auth.onAuthStateChanged(u => { if (S.criando) return; if (u) entrar(u); else { S.subs.forEach(f => f()); S.subs = []; S.me = null; telaLogin(S.avisoLogin); S.avisoLogin = null; } });
+
+/* LOTE 17: link de pagamento (Asaas) enviado pelo atendente no chat do suporte */
+function supPagCard(pg) { const v = 'R$ ' + (+pg.valor || 0).toFixed(2).replace('.', ','), dt = String(pg.vencimento || '').split('-').reverse().join('/'); return `<div class="sp-pg"><b>💳 ${v}</b><span>vence em ${dt}</span><div class="sp-pg-b"><a href="${esc(pg.fatura)}" target="_blank" rel="noopener">Pagar agora</a>${pg.pix ? `<button type="button" data-sppix="${esc(pg.pix)}">Copiar PIX</button>` : ''}</div></div>`; }
+document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-sppix]'); if (!b) return; (navigator.clipboard ? navigator.clipboard.writeText(b.dataset.sppix) : Promise.reject()).then(() => { b.textContent = 'Copiado!'; setTimeout(() => { b.textContent = 'Copiar PIX'; }, 2000); }).catch(() => prompt('Copie:', b.dataset.sppix)); });
+document.head.insertAdjacentHTML('beforeend', `<style>.sp-pg{margin-top:8px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid #C9D6F2;display:flex;flex-direction:column;gap:2px;white-space:normal}.sp-pg span{font-size:12.5px;color:#6B7280}.sp-pg-b{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}.sp-pg-b a,.sp-pg-b button{flex:1;text-align:center;padding:8px 10px;border-radius:9px;font-weight:700;font-size:13.5px;text-decoration:none;cursor:pointer;border:1px solid #1F5FE8}.sp-pg-b a{background:#1F5FE8;color:#fff}.sp-pg-b button{background:#fff;color:#1F5FE8}</style>`);
 </script></body></html>
