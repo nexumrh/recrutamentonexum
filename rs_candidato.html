@@ -931,4 +931,33 @@ if (typeof vPerfil === 'function') { const _vp = vPerfil; vPerfil = function (el
 document.head.insertAdjacentHTML('beforeend', '<style>.cv-box{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:14px;border-radius:14px;border:1px dashed var(--pri,#1250d4);background:rgba(18,80,212,.05)}.cv-box div{flex:1;min-width:200px;display:grid;gap:2px}.cv-box span{font-size:13px;opacity:.75}</style>');
 </script>
 
+
+
+
+
+<script>
+/* =====================================================================
+   LOTE 32 (Candidato): ficha de pré-admissão. Quem aceitou a proposta
+   preenche os dados do registro aqui mesmo; eles seguem para o RH.
+   ===================================================================== */
+const FICHA_CAMPOS = [['rg', 'RG (número e órgão)', 'text', 40], ['pis', 'PIS / NIS (se tiver)', 'text', 20], ['nascimento', 'Data de nascimento', 'date', 10], ['mae', 'Nome completo da mãe', 'text', 120],
+  ['estadoCivil', 'Estado civil', ['Solteiro(a)', 'Casado(a)', 'União estável', 'Divorciado(a)', 'Viúvo(a)'], 30], ['escolaridade', 'Escolaridade', ['Fundamental incompleto', 'Fundamental completo', 'Médio incompleto', 'Médio completo', 'Superior incompleto', 'Superior completo', 'Pós-graduação'], 40],
+  ['cep', 'CEP', 'text', 9], ['endereco', 'Endereço (rua, número, bairro)', 'text', 160], ['cidade', 'Cidade/UF', 'text', 80], ['banco', 'Banco, agência e conta para o salário', 'text', 120],
+  ['emergNome', 'Contato de emergência (nome e parentesco)', 'text', 80], ['emergTel', 'Telefone de emergência', 'tel', 20], ['uniforme', 'Tamanho do uniforme', ['PP', 'P', 'M', 'G', 'GG', 'XG'], 4]];
+function fichaAdmissao(a) {
+  const f = a.preAdmissao || {}, campo = ([k, t, tp, mx]) => `<div class="fld"><label for="fa-${k}">${t}</label>${Array.isArray(tp) ? `<select class="inp" id="fa-${k}"><option value="">Escolha</option>${tp.map(o => `<option${f[k] === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select>` : `<input class="inp" id="fa-${k}" type="${tp === 'date' ? 'date' : 'text'}" ${tp === 'tel' ? 'inputmode="tel"' : ''} maxlength="${mx}" value="${esc(f[k] || '')}">`}</div>`;
+  modal('Ficha de admissão', `<p class="hint" style="margin-top:0">Preencha agora para adiantar o seu registro. Os dados vão direto para o RH da empresa e não aparecem para mais ninguém.</p>${FICHA_CAMPOS.map(campo).join('')}`,
+    { foot: '<button class="btn sec" data-close>Depois</button><button class="btn ok" id="fa-ok">Enviar ao RH</button>', onMount: m => {
+      const cep = $('#fa-cep', m); cep.onblur = async () => { const c = cep.value.replace(/\D/g, ''); if (c.length !== 8 || $('#fa-endereco', m).value) return; try { const r = await (await fetch(`https://viacep.com.br/ws/${c}/json/`)).json(); if (!r.erro) { $('#fa-endereco', m).value = [r.logradouro, r.bairro].filter(Boolean).join(', '); $('#fa-cidade', m).value = `${r.localidade}/${r.uf}`; } } catch (e) { } };
+      $('#fa-ok', m).onclick = async ev => { const d = {}; FICHA_CAMPOS.forEach(([k, , , mx]) => { const v = $(`#fa-${k}`, m).value.trim().slice(0, mx); if (v) d[k] = v; });
+        const falta = ['rg', 'nascimento', 'mae', 'endereco', 'cidade'].filter(k => !d[k]); if (falta.length) return toast('Preencha RG, nascimento, nome da mãe, endereço e cidade.', true);
+        ev.currentTarget.disabled = true; try { await sub(EID, 'apps').doc(a.id).update({ preAdmissao: { ...d, em: agora() }, mensagens: [...(a.mensagens || []), { de: 'cand', t: 'Preenchi a ficha de admissão.', em: agora() }] }); closeModal(); toast('Ficha enviada ao RH. Obrigado!'); } catch (er) { ev.currentTarget.disabled = false; toast(msgErro(er), true); } };
+    } });
+}
+{ const _bp32 = blocoProposta; blocoProposta = function (a) { const h = _bp32.apply(this, arguments); if (!h || !a.propostaResp || a.propostaResp.status !== 'aceita') return h;
+  const ok = a.preAdmissao && a.preAdmissao.em;
+  return h.replace(/<\/div>\s*$/, `<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line2)"><b>Ficha de admissão</b><p class="hint" style="margin:4px 0 8px">${ok ? `Enviada em ${fd(a.preAdmissao.em.slice(0, 10))}. Se algo mudou, você pode corrigir.` : 'Preencha os dados do registro (RG, endereço, banco, contato de emergência) para adiantar o seu primeiro dia.'}</p><button class="btn ${ok ? 'sec' : 'ok'}" data-fadm="${a.id}">${ok ? 'Corrigir a ficha' : 'Preencher a ficha de admissão'}</button></div></div>`); }; }
+document.addEventListener('click', e => { const t = e.target.closest && e.target.closest('[data-fadm]'); if (!t) return; const a = P.apps.find(x => x.id === t.dataset.fadm); if (a) fichaAdmissao(a); });
+</script>
+
 </body></html>

@@ -2595,6 +2595,15 @@ if (typeof vQuest === 'function') { const _vqSim = vQuest; vQuest = function (el
 
 
 
+
+
+
+
+
+
+
+
+
 <script>
 /* =====================================================================
    LOTE 28 (Recrutador): menu Treinamento com as videoaulas só do
@@ -2723,4 +2732,47 @@ function msgVarios() {
 setTimeout(() => rsAvBase().catch(() => { }), 1500);
 
 </script>
+<script>
+/* =====================================================================
+   LOTE 32 (Recrutador): vaga com prazo avisando sozinha e ficha de
+   pré-admissão preenchida pelo próprio candidato aprovado.
+   ===================================================================== */
+/* ---------- 1. Prazo das inscrições: avisa antes de fechar e cobra o retorno de quem ficou sem resposta ---------- */
+function vagasNoPrazo() {
+  const hj = iso(), l = [];
+  (S.d.vagas || []).filter(v => v.prazo && v.status === 'aberta').forEach(v => { const d = diffD(new Date(hj + 'T12:00'), new Date(v.prazo + 'T12:00')), abertos = S.d.apps.filter(a => a.vagaId === v.id && !final(a)).length;
+    if (d < 0) l.push({ v, tipo: 'passou', d, abertos }); else if (d <= 3) l.push({ v, tipo: 'perto', d, abertos }); });
+  const lim = iso(addD(new Date(), -30));
+  (S.d.vagas || []).filter(v => v.status !== 'aberta' && ((v.fechadaEm || '').slice(0, 10) >= lim || (v.prazo || '') >= lim)).forEach(v => { const sem = S.d.apps.filter(a => a.vagaId === v.id && ((etapaV(a) === 'reprovado' && !a.retornoEm && !(a.mensagens || []).some(m => m.de === 'rh' && (m.em || '') >= ((a.decisao || {}).em || '')))) || !final(a)).length; if (sem) l.push({ v, tipo: 'retorno', abertos: sem }); });
+  return l;
+}
+function faixaPrazos() {
+  const l = vagasNoPrazo(); if (!l.length) return '';
+  return `<section class="panel vp-box" id="vp-box"><h2 style="margin:0 0 8px">Prazos das vagas</h2><ul class="list">${l.map(x => `<li><div class="t" style="flex:1"><div><b>${esc(x.v.titulo)}</b> ${x.tipo === 'passou' ? '<span class="pill bad">inscrições encerradas</span>' : x.tipo === 'perto' ? `<span class="pill warn">${x.d === 0 ? 'fecha hoje' : x.d === 1 ? 'fecha amanhã' : `fecha em ${x.d} dias`}</span>` : '<span class="pill">sem retorno</span>'}</div>
+    <div>${x.tipo === 'passou' ? `O prazo foi ${fd(x.v.prazo)}. A vaga sumiu do site, mas continua aberta aqui${x.abertos ? ` com ${x.abertos} candidato(s) em andamento` : ''}.` : x.tipo === 'perto' ? `Inscrições até ${fd(x.v.prazo)}${x.abertos ? ` · ${x.abertos} em andamento` : ''}. Quer prorrogar?` : `${x.abertos} candidato(s) ainda sem retorno.`}</div></div>
+    <div class="row" style="gap:6px;flex-wrap:wrap">${x.tipo === 'perto' ? `<button class="btn sec sm" data-vpp="${x.v.id}">Prorrogar 7 dias</button>` : x.tipo === 'passou' ? `<button class="btn sec sm" data-vpp="${x.v.id}">Prorrogar 7 dias</button><button class="btn sm" data-vpf="${x.v.id}">Fechar e dar retorno</button>` : `<button class="btn sm" data-vpr="${x.v.id}">Dar retorno</button>`}</div></li>`).join('')}</ul></section>`;
+}
+function ligarPrazos(el) {
+  $$('[data-vpp]', el).forEach(b => b.onclick = async () => { const v = vagaDe(b.dataset.vpp), base = v.prazo && v.prazo > iso() ? v.prazo : iso(), novo = iso(addD(new Date(base + 'T12:00'), 7));
+    try { await sub(S.eid, 'vagas').doc(v.id).update({ prazo: novo }); log(`Prorrogou as inscrições da vaga ${v.titulo} até ${fd(novo)}`); toast(`Inscrições prorrogadas até ${fd(novo)}.`); } catch (e) { toast(msgErro(e), true); } });
+  $$('[data-vpf]', el).forEach(b => b.onclick = () => { const v = vagaDe(b.dataset.vpf); confirmar(`Fechar a vaga <b>${esc(v.titulo)}</b>? Em seguida você manda o retorno para quem não foi aprovado (portal, e-mail e WhatsApp).`, async () => {
+    try { await sub(S.eid, 'vagas').doc(v.id).update({ status: 'fechada', fechadaEm: agora() }); log(`Fechou a vaga ${v.titulo} no fim do prazo`); setTimeout(() => retornoLote({ ...v, status: 'fechada' }), 300); } catch (e) { toast(msgErro(e), true); } }, 'Fechar'); });
+  $$('[data-vpr]', el).forEach(b => b.onclick = () => retornoLote(vagaDe(b.dataset.vpr)));
+}
+{ const _vp32 = vPainel; vPainel = function (el) { const r = _vp32.apply(this, arguments); try { if (ehEditor() && !$('#vp-box', el)) { const k = el.querySelector('.kpis'); if (k) { k.insertAdjacentHTML('afterend', faixaPrazos()); ligarPrazos(el); } } } catch (e) { console.warn(e); } return r; }; }
+/* aviso no celular do recrutador uma vez por dia quando uma vaga está para fechar */
+setTimeout(() => { try { if (!S.me || !ehEditor()) return; const k = 'rs:prazos:' + iso(); if (localStorage.getItem(k)) return; const l = vagasNoPrazo().filter(x => x.tipo !== 'retorno'); if (!l.length) return; localStorage.setItem(k, '1');
+  toast(l.length === 1 ? `A vaga ${l[0].v.titulo} ${l[0].tipo === 'passou' ? 'encerrou as inscrições' : 'está perto do prazo'}. Veja no Painel.` : `${l.length} vagas perto ou depois do prazo. Veja no Painel.`); } catch (e) { } }, 6000);
+
+/* ---------- 2. Pré-admissão: a ficha que o candidato aprovado preenche no portal ---------- */
+const FICHA_ROT = { rg: 'RG', pis: 'PIS', nascimento: 'Nascimento', mae: 'Nome da mãe', estadoCivil: 'Estado civil', escolaridade: 'Escolaridade', cep: 'CEP', endereco: 'Endereço', cidade: 'Cidade', banco: 'Banco e conta', emergNome: 'Contato de emergência', emergTel: 'Telefone de emergência', uniforme: 'Tamanho do uniforme' };
+{ const _pr32 = payloadRH; payloadRH = function (a) { const d = _pr32.apply(this, arguments); const f = a.preAdmissao; if (f && typeof f === 'object') { const o = {}; Object.keys(FICHA_ROT).forEach(k => { if (f[k]) o[k] = String(f[k]).slice(0, 160); }); if (Object.keys(o).length) d.ficha = o; } return d; }; }
+function blocoFicha(a) {
+  const f = a.preAdmissao; if (!f) return '';
+  return `<div class="panel" style="padding:12px 14px;margin:8px 0 0"><b>Ficha de admissão preenchida pelo candidato</b> <span class="hint">em ${fdt(f.em)}</span><div class="res" style="margin-top:8px">${Object.entries(FICHA_ROT).filter(([k]) => f[k]).map(([k, t]) => `<div><span class="hint">${t}</span><span>${esc(f[k])}</span></div>`).join('')}</div><p class="hint" style="margin:8px 0 0">Vai junto quando você envia a admissão ao NEXUM RH.</p></div>`;
+}
+{ const _ab32 = abrirCand; abrirCand = function (id) { const r = _ab32.apply(this, arguments); try { const a = S.d.apps.find(x => x.id === id); if (a && a.preAdmissao) setTimeout(() => { const b = document.querySelector('#modal-root .modal-b'); if (b && !$('#fi-pre', b)) { const d = document.createElement('div'); d.id = 'fi-pre'; d.innerHTML = blocoFicha(a); b.prepend(d); } }, 80); } catch (e) { } return r; }; }
+(function () { const st = document.createElement('style'); st.textContent = '.vp-box{border-left:4px solid var(--warn,#d97706)}'; document.head.appendChild(st); })();
+</script>
+
 </body></html>
