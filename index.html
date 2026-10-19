@@ -2580,6 +2580,10 @@ if (typeof vQuest === 'function') { const _vqSim = vQuest; vQuest = function (el
   document.head.appendChild(st);
 })();
 </script>
+
+
+
+
 <script>
 /* =====================================================================
    LOTE 28 (Recrutador): menu Treinamento com as videoaulas só do
@@ -2605,8 +2609,9 @@ async function rsAulaToken() {
 }
 async function vTreinRS(el) {
   el.innerHTML = '<div class="panel"><p class="hint">Abrindo o treinamento…</p></div>';
-  let tk = ''; try { tk = await rsAulaToken(); } catch (e) { el.innerHTML = `<div class="panel empty"><b>Não foi possível abrir o treinamento agora.</b><p class="hint">Confira a internet e tente de novo. Se continuar, fale com o suporte da NEXUM.</p></div>`; return; }
-  if (S.view !== 'trein') return; const u = NX_AULAS.url + tk;
+  let tk = ''; try { tk = await rsAulaToken(); } catch (e) { console.warn('treinamento: link não criado, abrindo no modo direto', e); }
+  if (S.view !== 'trein') return;
+  const u = tk ? NX_AULAS.url + tk : `https://rh.nexumdp.com.br/aula.html?m=rs&n=${encodeURIComponent((S.me && S.me.nome) || '')}&e=${encodeURIComponent((S.emp && S.emp.nome) || '')}`;
   el.innerHTML = `<div class="row" style="margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap"><p class="hint" style="margin:0;flex:1;min-width:240px">Aulas curtas, com voz, só do Recrutamento e Seleção. Elas seguem em ordem e não dá para adiantar. No fim tem um quiz e o certificado.</p><a class="btn sec sm" href="${u}" target="_blank" rel="noopener">Abrir em tela cheia</a></div>
     <iframe src="${u}" title="Treinamento do Recrutamento e Seleção" allow="autoplay; fullscreen" allowfullscreen style="width:100%;height:calc(100vh - 190px);min-height:560px;border:1px solid var(--line,#e3e8f0);border-radius:14px;background:#fff"></iframe>`;
 }
