@@ -2233,7 +2233,8 @@ function rsBloqueio(admin, lic) {
   $('#rs-lic-x').onclick = () => { $('#rs-lic').remove(); auth.signOut(); location.reload(); };
 }
 { const _en = entrar; entrar = async function (u) { await _en(u); let n = 0; const t = setInterval(() => { if (S.emp && S.emp.nome !== undefined || ++n > 40) { clearInterval(t); rsLicenca(); } }, 250); }; }
-</script><script>
+</script>
+<script>
 /* =====================================================================
    AVISO AUTOMÁTICO AO CANDIDATO A CADA ETAPA
    Quando o candidato muda de etapa sem mensagem (arrastar o cartão ou
@@ -2584,6 +2585,13 @@ if (typeof vQuest === 'function') { const _vqSim = vQuest; vQuest = function (el
 
 
 
+
+
+
+
+
+
+
 <script>
 /* =====================================================================
    LOTE 28 (Recrutador): menu Treinamento com as videoaulas só do
@@ -2621,4 +2629,95 @@ if (typeof render === 'function') { const _rndTr = render; render = function () 
 setTimeout(() => { try { if (S.me && document.querySelector('.side .nav') && !document.querySelector('.side .nav button[data-v="trein"]') && typeof shell === 'function') shell(); } catch (e) { } }, 0);
 </script>
 
+<script>
+/* =====================================================================
+   LOTE 30 (Recrutador): toda mensagem que vai para o portal do candidato
+   (mudou de etapa, aprovado, reprovado, convite de entrevista, proposta,
+   mensagem avulsa) também sai por e-mail e WhatsApp, pelo conector NEXUM.
+   E "Mensagem para vários": o mesmo recado para muitos candidatos de uma vez.
+   ===================================================================== */
+const RS_AV = { base: null, fila: [], rodando: false };
+const avisoCanais = () => ({ email: true, whats: true, ...((S.emp && S.emp.avisoCanais) || {}) });
+async function rsAvBase() {
+  if (RS_AV.base !== null) return RS_AV.base;
+  try { const r = await fetch(`https://firestore.googleapis.com/v1/projects/nexum-30044/databases/(default)/documents/plataforma/publico?key=${SUP_FB_CFG.apiKey}`); const f = r.ok ? ((await r.json()).fields || {}) : {}; RS_AV.base = String((f.asaasUrl || {}).stringValue || '').replace(/\/+$/, ''); } catch (e) { RS_AV.base = ''; }
+  return RS_AV.base;
+}
+const RS_TIT = { aprovado: 'Você foi aprovado(a)!', reprovado: 'Retorno sobre a sua candidatura', entrevista: 'Você avançou para a entrevista', teste: 'Você avançou para a etapa de teste', triagem: 'Recebemos a sua candidatura', proposta: 'Você recebeu uma proposta', contratado: 'Bem-vindo(a) à equipe!' };
+function rsAvisar(appId, texto, etapa) {
+  const c = avisoCanais(), canais = [c.email !== false && 'email', c.whats !== false && 'whats'].filter(Boolean); if (!canais.length || !texto) return;
+  RS_AV.fila.push({ eid: S.eid, appId, texto: String(texto).slice(0, 1500), titulo: RS_TIT[etapa] || 'Nova mensagem sobre a sua candidatura', canais }); rsAvRodar();
+}
+async function rsAvRodar() {
+  if (RS_AV.rodando) return; RS_AV.rodando = true; let em = 0, wa = 0, falhou = 0;
+  try {
+    const base = await rsAvBase(); if (!base) { RS_AV.fila = []; return; }
+    while (RS_AV.fila.length) {
+      const x = RS_AV.fila.shift();
+      try { const tk = await auth.currentUser.getIdToken(); const r = await fetch(base + '/api/notificar-rs', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tk }, body: JSON.stringify(x) }); const j = await r.json().catch(() => ({})); if (r.ok) { em += j.email || 0; wa += j.whats || 0; } else falhou++; }
+      catch (e) { falhou++; }
+    }
+  } finally { RS_AV.rodando = false; }
+  if (em || wa) { const p = [em && `${em} e-mail${em > 1 ? 's' : ''}`, wa && `${wa} WhatsApp`].filter(Boolean).join(' e '); toast(`Aviso enviado também por ${p}.`); }
+}
+/* novas mensagens do RH dentro de uma gravação do candidato */
+function rsNovasMsgs(caminho, dados) {
+  const m = /^empresas\/([^/]+)\/apps\/([^/]+)$/.exec(caminho || ''); if (!m || !dados || typeof dados !== 'object' || Array.isArray(dados)) return null;
+  const a = (S.d.apps || []).find(x => x.id === m[2]); if (!a || a.anonimizado) return null;
+  let novas = [];
+  if (Array.isArray(dados.mensagens)) novas = dados.mensagens.slice((a.mensagens || []).length).filter(x => x && x.de === 'rh' && x.t);
+  else if (typeof dados.etapa === 'string' && AVISO_ETAPA_PADRAO[dados.etapa] && avisoEtapaCfg().ativo !== false && (a.etapa || '') !== dados.etapa) { const t = textoAvisoEtapa(a, dados.etapa); if (t) novas = [{ t }]; }
+  if (!novas.length) return null;
+  return { appId: m[2], texto: novas[novas.length - 1].t, etapa: dados.etapa || (dados.decisao && dados.decisao.resultado) || (dados.proposta ? 'proposta' : '') };
+}
+(function () {
+  const P_ = Object.getPrototypeOf(db.doc('empresas/_')), orig = P_.update;
+  P_.update = function (dados) {
+    let n = null; try { n = rsNovasMsgs(this.path, dados); } catch (e) { }
+    const r = orig.apply(this, arguments); if (n) Promise.resolve(r).then(() => rsAvisar(n.appId, n.texto, n.etapa)).catch(() => { }); return r;
+  };
+  const B_ = Object.getPrototypeOf(db.batch()), bu = B_.update, bc = B_.commit; if (B_ === Object.prototype || typeof bu !== 'function' || typeof bc !== 'function') return;
+  B_.update = function (ref, dados) { try { const n = ref && rsNovasMsgs(ref.path, dados); if (n) (this._rsAv = this._rsAv || []).push(n); } catch (e) { } return bu.apply(this, arguments); };
+  B_.commit = function () { const l = this._rsAv || [], r = bc.apply(this, arguments); if (l.length) Promise.resolve(r).then(() => l.forEach(n => rsAvisar(n.appId, n.texto, n.etapa))).catch(() => { }); return r; };
+})();
+/* o cartão "foi avisado no portal" passa a dizer os outros canais */
+{ const _cae = cartaoAvisoEtapa; cartaoAvisoEtapa = function (a, t) { _cae(a, t); if (!RS_AV.base) return; const c = avisoCanais(), d = document.querySelector('.av-et b'); if (!d) return; const p = [c.email !== false && a.perfil.email && 'e-mail', c.whats !== false && a.perfil.telefone && 'WhatsApp'].filter(Boolean); if (p.length) { d.textContent = `${primeiro(a.perfil.nome)} foi avisado(a) no portal e por ${p.join(' e ')}.`; const w = document.querySelector('.av-et a'); if (w && c.whats !== false) w.remove(); } }; }
+/* configurações > Mensagens padrão: canais dos avisos */
+{ const _vc30 = vConfig; vConfig = function (el, aba) { _vc30.apply(this, arguments); try {
+  if ((aba || S.cfgAba) !== 'msg') return; const w = $('#cf-b', el); if (!w || $('#ac-p', w)) return; const c = avisoCanais();
+  const s = document.createElement('section'); s.className = 'panel'; s.id = 'ac-p';
+  s.innerHTML = `<h2 style="margin-bottom:4px">Por onde o candidato é avisado</h2><p class="hint" style="margin-top:0">Toda mensagem que vai para o portal do candidato (mudança de etapa, aprovado, reprovado, convite de entrevista, proposta e mensagens que você escreve) também pode sair por e-mail e pelo WhatsApp da NEXUM, automaticamente.</p>
+    <label class="row" style="gap:8px"><input type="checkbox" id="ac-e" ${c.email !== false ? 'checked' : ''}> Mandar também por e-mail</label>
+    <label class="row" style="gap:8px;margin:6px 0 10px"><input type="checkbox" id="ac-w" ${c.whats !== false ? 'checked' : ''}> Mandar também por WhatsApp</label><div class="row end"><button class="btn" id="ac-ok">Salvar</button></div>`;
+  const ae = $('#ae-p', w); if (ae) ae.before(s); else w.appendChild(s);
+  $('#ac-ok', s).onclick = async () => { const v = { email: $('#ac-e', s).checked, whats: $('#ac-w', s).checked }; try { await emp(S.eid).update({ avisoCanais: v }); S.emp.avisoCanais = v; log('Alterou os canais dos avisos ao candidato'); toast('Salvo.'); } catch (e) { toast(msgErro(e), true); } };
+} catch (e) { console.warn(e); } }; }
+/* ---------- Mensagem para vários candidatos ---------- */
+function msgVarios() {
+  const q = (S.busca || '').toLowerCase(), v = id => (S.d.vagas || []).find(x => x.id === id) || {};
+  const l = S.d.apps.filter(a => !a.anonimizado && (!S.vagaSel || a.vagaId === S.vagaSel) && (!q || JSON.stringify([a.perfil.nome, a.perfil.cidade, a.perfil.habilidades, a.perfil.email]).toLowerCase().includes(q)) && (S.encerrados || !['reprovado', 'desistiu'].includes(etapaV(a))));
+  if (!l.length) return toast('Nenhum candidato neste filtro.', true);
+  const et = ETAPAS.filter(([k]) => l.some(a => etapaV(a) === k));
+  modal('Mensagem para vários candidatos', `<p class="hint" style="margin-top:0">${S.vagaSel ? `Vaga: <b>${esc(v(S.vagaSel).titulo || '')}</b>. ` : ''}A mensagem vai para o portal de cada candidato marcado${(c => [c.email !== false && 'e-mail', c.whats !== false && 'WhatsApp'].filter(Boolean))(avisoCanais()).map(x => ' e por ' + x).join('')}. Use {nome} e {vaga}.</p>
+    <div class="row" style="gap:6px;flex-wrap:wrap;margin-bottom:8px"><button type="button" class="btn ghost sm" data-mv="todos">Marcar todos</button><button type="button" class="btn ghost sm" data-mv="nenhum">Desmarcar</button>${et.map(([k, t]) => `<button type="button" class="btn ghost sm" data-mv="${k}">Só ${esc(t)}</button>`).join('')}</div>
+    <ul class="list" style="max-height:260px;overflow:auto;margin:0 0 10px">${l.map(a => `<li><label class="row" style="gap:8px;flex:1;cursor:pointer"><input type="checkbox" data-mva="${a.id}" data-et="${etapaV(a)}" checked><span><b>${esc(a.perfil.nome)}</b> <span class="hint">· ${esc((ETAPAS.find(e => e[0] === etapaV(a)) || [, ''])[1])}${S.vagaSel ? '' : ' · ' + esc(v(a.vagaId).titulo || a.vagaTitulo || '')}</span></span></label></li>`).join('')}</ul>
+    <div class="fld"><label for="mv-t">Mensagem</label><textarea class="inp" id="mv-t" rows="4" placeholder="Olá, {nome}! ..."></textarea></div>`,
+    { foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="mv-ok">Enviar</button>', onMount: m => {
+      const cks = () => $$('[data-mva]', m), cont = () => { $('#mv-ok', m).textContent = `Enviar para ${cks().filter(c => c.checked).length}`; };
+      $$('[data-mv]', m).forEach(b => b.onclick = () => { const k = b.dataset.mv; cks().forEach(c => c.checked = k === 'todos' || (k !== 'nenhum' && c.dataset.et === k)); cont(); });
+      m.addEventListener('change', cont); cont();
+      $('#mv-ok', m).onclick = async ev => {
+        const t = $('#mv-t', m).value.trim(), ids = cks().filter(c => c.checked).map(c => c.dataset.mva); if (!t) return toast('Escreva a mensagem.', true); if (!ids.length) return toast('Marque pelo menos um candidato.', true);
+        if (!confirm(`Enviar esta mensagem para ${ids.length} candidato(s)?`)) return; ev.currentTarget.disabled = true; let n = 0;
+        for (const id of ids) { const a = S.d.apps.find(x => x.id === id); if (!a) continue; const txt = t.replace(/\{nome\}/g, primeiro(a.perfil.nome)).replace(/\{vaga\}/g, v(a.vagaId).titulo || a.vagaTitulo || 'a vaga').replace(/\{empresa\}/g, S.emp.nome || '');
+          try { await sub(S.eid, 'apps').doc(id).update({ mensagens: [...(a.mensagens || []), { de: 'rh', t: txt, por: S.me.nome, em: agora() }], atualizadoEm: agora() }); n++; } catch (e) { } }
+        log(`Mandou mensagem para ${n} candidato(s)`); closeModal(); toast(`Mensagem enviada para ${n} candidato(s).`);
+      };
+    } });
+}
+{ const _ec30 = extrasCands; extrasCands = function (el) { _ec30.apply(this, arguments); try { if ($('#mv-b', el) || !['admin', 'recrutador'].includes(S.me.role)) return; const sel = $('#cd-b', el); if (!sel) return; const b = document.createElement('button'); b.className = 'btn sec'; b.id = 'mv-b'; b.type = 'button'; b.textContent = 'Mensagem para vários'; b.onclick = msgVarios; sel.after(b); } catch (e) { console.warn(e); } }; }
+
+setTimeout(() => rsAvBase().catch(() => { }), 1500);
+
+</script>
 </body></html>

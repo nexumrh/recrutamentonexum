@@ -875,7 +875,8 @@ if (iniciarFirebase('rs-candidato')) {
     }).catch(er => { $('#view').innerHTML = `<div class="panel empty"><b>Não foi possível abrir</b>${esc(msgErro(er))}</div>`; });
   }
 }
-</script><script>
+</script>
+<script>
 /* =====================================================================
    CURRÍCULO PRONTO: monta um currículo em PDF com os dados do perfil,
    para quem não tem currículo. Fica anexado ao perfil e pode ser baixado.
