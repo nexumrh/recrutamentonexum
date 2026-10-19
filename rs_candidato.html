@@ -495,7 +495,7 @@ const IND = (() => { let c = (Q.get('ind') || '').replace(/[^A-Za-z0-9]/g, '').s
 const campoInd = id => IND ? `<p class="hint" style="margin:4px 0 0">Você chegou pelo link de indicação de um funcionário da empresa.</p>` : `<div class="fld"><label for="${id}">Alguém que trabalha na empresa indicou você? (opcional)</label><input class="inp" id="${id}" maxlength="120" placeholder="Nome de quem indicou"></div>`;
 const lerInd = (m, id) => { if (IND) return { cod: IND }; const n = (($('#' + id, m) || {}).value || '').trim().slice(0, 120); return n.length > 1 ? { nome: n } : null; };
 const P = { user: null, perfil: null, emp: {}, vagas: [], apps: [], ents: [], view: VID ? 'vaga' : 'vagas', vaga: VID, subs: [], apos: null };
-const ORIGENS = ['Instagram', 'WhatsApp', 'Indicação de amigo', 'Site da empresa', 'Facebook', 'Na loja', 'Outro'];
+const ORIGENS = ['Instagram', 'WhatsApp', 'Indicação de amigo', 'Site da empresa', 'Facebook', 'LinkedIn', 'Indeed', 'InfoJobs', 'Telegram', 'E-mail', 'Banco de talentos', 'Na loja', 'Outro'];
 const etapaC = a => a.desistiu && !['aprovado', 'reprovado'].includes(a.etapa) ? 'desistiu' : a.etapa;
 const perfilOk = p => p && p.nome && p.telefone && p.cidade && (p.resumo || p.curriculo || (p.experiencias || []).length);
 function base() {
@@ -809,23 +809,23 @@ function vigiarSalas() {
 const PARTE = 600000;
 function bannerGravacao(el) {
   P.apps.filter(a => a.gravacao && !final(etapaC(a)) && Object.keys((a.gravacao.respostas || {})).length < a.gravacao.perguntas.length).forEach(a => { if ($(`#gv-${a.id.replace(/[^\w-]/g, '')}`, el)) return;
-    el.insertAdjacentHTML('afterbegin', `<section class="panel" id="gv-${a.id.replace(/[^\w-]/g, '')}" style="border-color:var(--pri);background:linear-gradient(135deg,#F2F6FF,#fff)"><div class="row" style="gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><b>Grave a sua entrevista: ${esc(a.vagaTitulo)}</b><div class="hint">${a.gravacao.perguntas.length} pergunta(s) · até ${a.gravacao.tempo} segundos cada · responder até ${fd(a.gravacao.prazo)}. Você pode regravar antes de enviar.</div></div><button class="btn" data-gv="${a.id}">Gravar agora</button></div></section>`); });
+    el.insertAdjacentHTML('afterbegin', `<section class="panel" id="gv-${a.id.replace(/[^\w-]/g, '')}" style="border-color:var(--pri);background:linear-gradient(135deg,#F2F6FF,#fff)"><div class="row" style="gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><b>${a.gravacao.modo === 'audio' ? 'Responda por áudio' : 'Grave a sua entrevista'}: ${esc(a.vagaTitulo)}</b><div class="hint">${a.gravacao.perguntas.length} pergunta(s) · até ${a.gravacao.tempo} segundos cada · responder até ${fd(a.gravacao.prazo)}. Você pode regravar antes de enviar.</div></div><button class="btn" data-gv="${a.id}">Gravar agora</button></div></section>`); });
   $$('[data-gv]', el).forEach(b => b.onclick = () => gravarEntrevista(P.apps.find(a => a.id === b.dataset.gv)));
 }
 async function gravarEntrevista(a, qi) {
   const g = a.gravacao, resp = g.respostas || {}; qi = qi ?? g.perguntas.findIndex((_, i) => !resp[i]); if (qi < 0) return toast('Você já enviou todas as respostas.');
   let stream = null, rec = null, partes = [], blob = null, t0 = 0, tm = null, dur = 0;
-  const mime = ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4'].find(x => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(x)) || '';
+  const soAudio = g.modo === 'audio', mime = (soAudio ? ['audio/webm;codecs=opus', 'audio/webm', 'audio/mp4', 'audio/ogg'] : ['video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4']).find(x => window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(x)) || '';
   const para = () => { clearInterval(tm); if (rec && rec.state === 'recording') rec.stop(); };
   const solta = () => { para(); if (stream) stream.getTracks().forEach(t => t.stop()); };
-  modal(`Pergunta ${qi + 1} de ${g.perguntas.length}`, `<p style="font-size:18px;font-weight:600;margin-top:0">${esc(g.perguntas[qi])}</p><div class="gv-cam"><video id="gv-vid" playsinline muted autoplay></video><span class="gv-rec" id="gv-rec" hidden>● <b id="gv-s">0</b>s / ${g.tempo}s</span></div><p class="hint" id="gv-h">Olhe para a câmera, fale com calma e com boa luz. Você tem até ${g.tempo} segundos.</p>`,
+  modal(`Pergunta ${qi + 1} de ${g.perguntas.length}`, `<p style="font-size:18px;font-weight:600;margin-top:0">${esc(g.perguntas[qi])}</p><div class="gv-cam ${soAudio ? 'gv-aud' : ''}"><video id="gv-vid" playsinline muted autoplay></video><span class="gv-rec" id="gv-rec" hidden>● <b id="gv-s">0</b>s / ${g.tempo}s</span></div><p class="hint" id="gv-h">${soAudio ? 'Fale com calma, num lugar sem barulho' : 'Olhe para a câmera, fale com calma e com boa luz'}. Você tem até ${g.tempo} segundos.</p>`,
     { foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn sec" id="gv-re" hidden>Regravar</button><button class="btn" id="gv-go">Começar a gravar</button><button class="btn" id="gv-env" hidden>Enviar resposta</button>', onMount: async m => {
       const ov = m.closest('.ov'); $$('[data-close]', ov).forEach(b => b.addEventListener('click', solta)); ov.addEventListener('mousedown', e => { if (e.target === ov) solta(); });
       const vid = $('#gv-vid', m), go = $('#gv-go', m), env = $('#gv-env', m), re = $('#gv-re', m), h = $('#gv-h', m);
-      try { stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { ideal: 15 }, facingMode: 'user' }, audio: true }); vid.srcObject = stream; }
-      catch (er) { h.textContent = 'Não conseguimos abrir a câmera. Libere a câmera e o microfone para este site e tente de novo.'; go.disabled = true; return; }
+      try { stream = await navigator.mediaDevices.getUserMedia(soAudio ? { audio: { echoCancellation: true, noiseSuppression: true } } : { video: { width: { ideal: 480 }, height: { ideal: 360 }, frameRate: { ideal: 15 }, facingMode: 'user' }, audio: true }); vid.srcObject = stream; }
+      catch (er) { h.textContent = soAudio ? 'Não conseguimos abrir o microfone. Libere o microfone para este site e tente de novo.' : 'Não conseguimos abrir a câmera. Libere a câmera e o microfone para este site e tente de novo.'; go.disabled = true; return; }
       const grava = () => { partes = []; blob = null; vid.srcObject = stream; vid.muted = true; vid.controls = false; vid.play && vid.play();
-        try { rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), videoBitsPerSecond: 250000, audioBitsPerSecond: 32000 }); } catch (er) { rec = new MediaRecorder(stream); }
+        try { rec = new MediaRecorder(stream, { ...(mime ? { mimeType: mime } : {}), ...(soAudio ? {} : { videoBitsPerSecond: 250000 }), audioBitsPerSecond: 32000 }); } catch (er) { rec = new MediaRecorder(stream); }
         rec.ondataavailable = e => { if (e.data && e.data.size) partes.push(e.data); };
         rec.onstop = () => { blob = new Blob(partes, { type: rec.mimeType || mime || 'video/webm' }); dur = Math.round((Date.now() - t0) / 1000); vid.srcObject = null; vid.src = URL.createObjectURL(blob); vid.muted = false; vid.controls = true; $('#gv-rec', m).hidden = true; go.hidden = true; env.hidden = false; re.hidden = false; h.textContent = `Gravação de ${dur} segundos. Assista e envie, ou grave de novo.`; };
         rec.start(1000); t0 = Date.now(); $('#gv-rec', m).hidden = false; go.textContent = 'Parar'; go.onclick = para; env.hidden = true; re.hidden = true; h.textContent = 'Gravando…';
@@ -841,7 +841,7 @@ async function gravarEntrevista(a, qi) {
         catch (er) { env.disabled = false; re.disabled = false; h.textContent = 'Não foi possível enviar. Verifique a internet e tente de novo.'; toast(msgErro(er), true); } };
     } });
 }
-document.head.insertAdjacentHTML('beforeend', '<style>.gv-cam{position:relative;border-radius:16px;overflow:hidden;background:#0A1733;aspect-ratio:4/3}.gv-cam video{width:100%;height:100%;object-fit:cover;display:block}.gv-rec{position:absolute;top:10px;left:10px;background:rgba(198,40,40,.92);color:#fff;border-radius:999px;padding:4px 10px;font-size:13px}</style>');
+document.head.insertAdjacentHTML('beforeend', '<style>.gv-cam{position:relative;border-radius:16px;overflow:hidden;background:#0A1733;aspect-ratio:4/3}.gv-cam video{width:100%;height:100%;object-fit:cover;display:block}.gv-aud{aspect-ratio:16/7;background:radial-gradient(circle at 50% 50%,#2F6BFF 0,#0A1733 60%)}.gv-aud video{opacity:0}.gv-aud::after{content:"🎙";position:absolute;inset:0;display:grid;place-items:center;font-size:54px;pointer-events:none}.gv-aud video[controls]{opacity:1;position:absolute;left:0;right:0;bottom:0;top:auto;height:54px;background:transparent}.gv-rec{position:absolute;top:10px;left:10px;background:rgba(198,40,40,.92);color:#fff;border-radius:999px;padding:4px 10px;font-size:13px}</style>');
 
 function bannerSala(el) {
   const on = P.ents.filter(e => e.status === 'agendada' && e.tipo === 'video' && P.salaOn[e.salaId]); if (!on.length) return;
@@ -875,4 +875,59 @@ if (iniciarFirebase('rs-candidato')) {
     }).catch(er => { $('#view').innerHTML = `<div class="panel empty"><b>Não foi possível abrir</b>${esc(msgErro(er))}</div>`; });
   }
 }
-</script></body></html>
+</script><script>
+/* =====================================================================
+   CURRÍCULO PRONTO: monta um currículo em PDF com os dados do perfil,
+   para quem não tem currículo. Fica anexado ao perfil e pode ser baixado.
+   ===================================================================== */
+let _jspdf = null;
+function carregarJsPDF() {
+  if (window.jspdf) return Promise.resolve(window.jspdf);
+  if (_jspdf) return _jspdf;
+  _jspdf = new Promise((ok, er) => { const s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'; s.onload = () => ok(window.jspdf); s.onerror = () => { _jspdf = null; er(new Error('Não foi possível carregar o gerador de PDF. Confira a internet.')); }; document.head.appendChild(s); });
+  return _jspdf;
+}
+async function montarCurriculoPDF(p) {
+  const { jsPDF } = await carregarJsPDF(); const doc = new jsPDF({ unit: 'mm', format: 'a4', compress: true });
+  const W = 210, M = 18, L = W - M * 2, AZ = [18, 80, 212], ESC = [14, 26, 51], CIN = [90, 101, 125]; let y = 0;
+  const quebra = h => { if (y + h > 282) { doc.addPage(); y = 20; } };
+  const txt = (t, size, cor, bold, x = M, larg = L, esp = 1.35) => { doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(size); doc.setTextColor(...cor); const ls = doc.splitTextToSize(String(t || ''), larg); ls.forEach(l => { quebra(size * 0.36 * esp); doc.text(l, x, y); y += size * 0.36 * esp; }); };
+  const secao = t => { y += 4; quebra(12); doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(...AZ); doc.text(t.toUpperCase(), M, y); y += 2; doc.setDrawColor(...AZ); doc.setLineWidth(0.5); doc.line(M, y, M + L, y); y += 6; };
+  // topo
+  doc.setFillColor(...ESC); doc.rect(0, 0, W, 40, 'F'); doc.setFillColor(...AZ); doc.rect(0, 40, W, 1.6, 'F');
+  doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(255, 255, 255); doc.text(doc.splitTextToSize(p.nome || '', L)[0], M, 19);
+  const cont = [p.telefone ? tel(p.telefone) : '', p.email || '', p.cidade || ''].filter(Boolean).join('   ·   ');
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(10); doc.setTextColor(205, 216, 240); doc.text(cont, M, 28); if (p.link) doc.text(p.link, M, 34);
+  y = 52;
+  if (p.resumo) { secao('Sobre mim'); txt(p.resumo, 10.5, ESC, false); }
+  if ((p.experiencias || []).length) { secao('Experiência profissional');
+    p.experiencias.forEach(x => { quebra(14); txt(`${x.cargo || ''}${x.empresa ? ' — ' + x.empresa : ''}`, 11, ESC, true); if (x.periodo) txt(x.periodo, 9.5, CIN, false); if (x.atividades) txt(x.atividades, 10, ESC, false); y += 2.5; }); }
+  if ((p.formacao || []).length) { secao('Formação');
+    p.formacao.forEach(x => { quebra(10); txt(`${x.curso || ''}${x.instituicao ? ' — ' + x.instituicao : ''}`, 10.5, ESC, true); txt(x.situacao || '', 9.5, CIN, false); y += 1.5; }); }
+  if ((p.habilidades || []).length) { secao('Habilidades'); txt(p.habilidades.join('   •   '), 10.5, ESC, false); }
+  if ((p.interesses || []).length) { secao('Áreas de interesse'); txt(p.interesses.join(', '), 10.5, ESC, false); }
+  doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...CIN); doc.text(`Atualizado em ${new Date().toLocaleDateString('pt-BR')}`, M, 290);
+  return doc;
+}
+async function gerarMeuCurriculo() {
+  const p = P.perfil || {};
+  if (!p.nome || !p.telefone) return editarPerfil(() => gerarMeuCurriculo(), 'Preencha seus dados primeiro. Depois o currículo sai pronto.');
+  if (!p.resumo && !(p.experiencias || []).length && !(p.formacao || []).length) return editarPerfil(() => gerarMeuCurriculo(), 'Conte um pouco sobre você e adicione experiência ou formação. É isso que vai no currículo.');
+  try { toast('Montando seu currículo…'); const doc = await montarCurriculoPDF(p), nome = `Curriculo - ${p.nome}.pdf`, data = doc.output('datauristring');
+    if (data.length > 700000) return toast('O currículo ficou grande demais. Encurte os textos e tente de novo.', true);
+    const d = { ...p, curriculo: { nome, tipo: 'application/pdf', data: data.replace(/^data:application\/pdf;[^,]*,/, 'data:application/pdf;base64,'), gerado: true }, atualizadoEm: agora() };
+    await db.doc(`candidatos/${P.user.uid}`).set(d); P.perfil = d; const pub = { ...d }; delete pub.lgpd; delete pub.criadoEm;
+    for (const a of P.apps.filter(a => !final(etapaC(a)))) await sub(EID, 'apps').doc(a.id).update({ perfil: pub }).catch(() => { });
+    const u = URL.createObjectURL(doc.output('blob')), a = document.createElement('a'); a.href = u; a.download = nome; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 3000);
+    toast('Currículo pronto! Ele já está no seu perfil e foi baixado no aparelho.'); render();
+  } catch (er) { toast(er.message || msgErro(er), true); }
+}
+if (typeof vPerfil === 'function') { const _vp = vPerfil; vPerfil = function (el) { _vp.apply(this, arguments); try {
+  const h = [...el.querySelectorAll('p.hint')].find(x => /Currículo:|Sem currículo anexado/.test(x.textContent)); if (!h) return; const p = P.perfil || {};
+  h.insertAdjacentHTML('afterend', `<div class="cv-box"><div><b>${p.curriculo && p.curriculo.gerado ? 'Seu currículo foi montado aqui' : p.curriculo ? 'Quer um currículo novo, com o visual do NEXUM?' : 'Não tem currículo? Monte o seu agora'}</b><span>Usamos os dados do seu perfil para criar um currículo em PDF, bonito e pronto para enviar.</span></div><button class="btn" id="cv-g">${p.curriculo && p.curriculo.gerado ? 'Atualizar currículo' : 'Montar meu currículo'}</button></div>`);
+  $('#cv-g', el).onclick = gerarMeuCurriculo;
+} catch (e) { console.warn(e); } }; }
+document.head.insertAdjacentHTML('beforeend', '<style>.cv-box{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:14px;border-radius:14px;border:1px dashed var(--pri,#1250d4);background:rgba(18,80,212,.05)}.cv-box div{flex:1;min-width:200px;display:grid;gap:2px}.cv-box span{font-size:13px;opacity:.75}</style>');
+</script>
+
+</body></html>

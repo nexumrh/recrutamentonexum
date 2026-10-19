@@ -1917,10 +1917,10 @@ function pedirGravacao(a) {
   const g = a.gravacao || {}, v = vagaDe(a.vagaId);
   modal(`Entrevista gravada · ${a.perfil.nome}`, `<p class="hint" style="margin-top:0">O candidato grava as respostas pelo celular, no portal, e você assiste quando puder. Ótimo para a primeira conversa e para a seleção de muitos candidatos.</p>
     ${[0, 1, 2].map(i => `<div class="fld"><label for="gv-${i}">Pergunta ${i + 1}${i ? ' (opcional)' : ''}</label><input class="inp" id="gv-${i}" value="${esc((g.perguntas || PERG_GRAV)[i] || '')}"></div>`).join('')}
-    <div class="grid"><div class="fld"><label for="gv-t">Tempo por resposta</label><select class="inp" id="gv-t">${opts([[30, '30 segundos'], [60, '1 minuto'], [90, '1 minuto e meio']], g.tempo || 60)}</select></div><div class="fld"><label for="gv-p">Responder até</label><input class="inp" type="date" id="gv-p" value="${g.prazo || iso(addD(new Date(), 3))}"></div></div>`,
+    <div class="fld"><label for="gv-mo">Formato da resposta</label><select class="inp" id="gv-mo">${opts([['video', 'Vídeo (câmera e microfone)'], ['audio', 'Só áudio: mais leve, ótimo para a triagem pelo WhatsApp']], g.modo || 'video')}</select></div><div class="grid"><div class="fld"><label for="gv-t">Tempo por resposta</label><select class="inp" id="gv-t">${opts([[30, '30 segundos'], [60, '1 minuto'], [90, '1 minuto e meio']], g.tempo || 60)}</select></div><div class="fld"><label for="gv-p">Responder até</label><input class="inp" type="date" id="gv-p" value="${g.prazo || iso(addD(new Date(), 3))}"></div></div>`,
     { foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="gv-ok">Enviar ao candidato</button>', onMount: m => $('#gv-ok', m).onclick = async () => {
       const pg = [0, 1, 2].map(i => $(`#gv-${i}`, m).value.trim()).filter(Boolean).slice(0, 3); if (!pg.length) return toast('Escreva ao menos uma pergunta.', true);
-      const gr = { perguntas: pg, tempo: +$('#gv-t', m).value, prazo: $('#gv-p', m).value, pedidoEm: agora(), por: S.me.nome }, t = `Olá, ${primeiro(a.perfil.nome)}! Para a vaga de ${v.titulo || a.vagaTitulo}, queremos conhecer você melhor: grave ${pg.length === 1 ? 'uma resposta curta' : pg.length + ' respostas curtas'} em vídeo pelo celular, no portal do candidato, até ${fd(gr.prazo)}. É rápido e você pode regravar.`;
+      const modo = $('#gv-mo', m).value === 'audio' ? 'audio' : 'video', gr = { perguntas: pg, tempo: +$('#gv-t', m).value, prazo: $('#gv-p', m).value, modo, pedidoEm: agora(), por: S.me.nome }, t = `Olá, ${primeiro(a.perfil.nome)}! Para a vaga de ${v.titulo || a.vagaTitulo}, queremos conhecer você melhor: grave ${pg.length === 1 ? 'uma resposta curta' : pg.length + ' respostas curtas'} ${modo === 'audio' ? 'em áudio (só a sua voz)' : 'em vídeo'} pelo celular, no portal do candidato, até ${fd(gr.prazo)}. É rápido e você pode regravar.`;
       try { await sub(S.eid, 'apps').doc(a.id).update({ gravacao: gr, mensagens: [...(a.mensagens || []), { de: 'rh', t, por: S.me.nome, em: agora() }], historico: [...(a.historico || []), { t: 'Pedido de entrevista gravada', em: agora(), por: S.me.nome }], atualizadoEm: agora() });
         log(`Pediu entrevista gravada para ${a.perfil.nome}`); closeModal(); const w = waLink(a.perfil.telefone, t + ' ' + linkPortal(a.vagaId));
         modal('Pedido enviado', `<p style="margin:0">O pedido já está no portal do candidato.${w ? ' Quer avisar também pelo WhatsApp?' : ''}</p>`, { size: 'sm', foot: `<button class="btn sec" data-close>Fechar</button>${w ? `<a class="btn" href="${w}" target="_blank" rel="noopener">Avisar no WhatsApp</a>` : ''}` }); } catch (er) { toast(msgErro(er), true); } } });
@@ -1933,10 +1933,10 @@ async function videosDe(a) {
 }
 function painelGravacao(m, a) {
   const g = a.gravacao, b = $('.modal-b', m); if (!g || !b || $('#gv-pn', m)) return; const resp = g.respostas || {}, n = Object.keys(resp).length;
-  b.insertAdjacentHTML('afterbegin', `<div class="panel" id="gv-pn" style="padding:12px 14px;border-color:${n ? 'var(--ok)' : 'var(--line)'}"><div class="row" style="gap:8px"><b style="flex:1">Entrevista gravada</b><span class="pill ${n ? 'ok' : 'warn'}">${n ? `${n} de ${g.perguntas.length} resposta(s)` : `aguardando até ${fd(g.prazo)}`}</span><button class="btn sm ${n ? '' : 'sec'}" id="gv-ver">${n ? 'Assistir' : 'Procurar vídeos'}</button></div><div id="gv-v"></div></div>`);
+  b.insertAdjacentHTML('afterbegin', `<div class="panel" id="gv-pn" style="padding:12px 14px;border-color:${n ? 'var(--ok)' : 'var(--line)'}"><div class="row" style="gap:8px"><b style="flex:1">${g.modo === 'audio' ? 'Respostas em áudio' : 'Entrevista gravada'}</b><span class="pill ${n ? 'ok' : 'warn'}">${n ? `${n} de ${g.perguntas.length} resposta(s)` : `aguardando até ${fd(g.prazo)}`}</span><button class="btn sm ${n ? '' : 'sec'}" id="gv-ver">${n ? 'Assistir' : 'Procurar vídeos'}</button></div><div id="gv-v"></div></div>`);
   const ver = $('#gv-ver', m); if (ver) ver.onclick = async () => { ver.disabled = true; ver.textContent = 'Carregando…'; try { const urls = await videosDe(a);
     const achou = Object.keys(urls).length;
-    $('#gv-v', m).innerHTML = achou ? g.perguntas.map((p, i) => `<div style="margin-top:10px"><b style="display:block;margin-bottom:4px">${i + 1}. ${esc(p)}</b>${urls[i] ? `<video src="${urls[i]}" controls playsinline preload="metadata" style="width:100%;max-width:420px;border-radius:12px;background:#000"></video><div class="hint">${resp[i] && resp[i].duracao ? resp[i].duracao + ' s · ' : ''}${resp[i] ? 'enviada em ' + fdt(resp[i].em) : 'recebida'}</div>` : '<span class="hint">Sem resposta.</span>'}</div>`).join('') : '<p class="hint" style="margin:10px 0 0">Nenhum vídeo recebido ainda. Se o candidato disse que já gravou, peça para ele abrir o portal e tocar em "Enviar" de novo, e confira se as regras do Firestore do Recrutamento (rs_firestore.rules) estão publicadas.</p>';
+    $('#gv-v', m).innerHTML = achou ? g.perguntas.map((p, i) => `<div style="margin-top:10px"><b style="display:block;margin-bottom:4px">${i + 1}. ${esc(p)}</b>${urls[i] ? `${/^audio/.test((resp[i] || {}).mime || '') || g.modo === 'audio' ? `<audio src="${urls[i]}" controls preload="metadata" style="width:100%;max-width:420px"></audio>` : `<video src="${urls[i]}" controls playsinline preload="metadata" style="width:100%;max-width:420px;border-radius:12px;background:#000"></video>`}<div class="hint">${resp[i] && resp[i].duracao ? resp[i].duracao + ' s · ' : ''}${resp[i] ? 'enviada em ' + fdt(resp[i].em) : 'recebida'}</div>` : '<span class="hint">Sem resposta.</span>'}</div>`).join('') : '<p class="hint" style="margin:10px 0 0">Nenhum vídeo recebido ainda. Se o candidato disse que já gravou, peça para ele abrir o portal e tocar em "Enviar" de novo, e confira se as regras do Firestore do Recrutamento (rs_firestore.rules) estão publicadas.</p>';
     if (achou) ver.remove(); else { ver.disabled = false; ver.textContent = 'Procurar de novo'; } }
     catch (er) { ver.disabled = false; ver.textContent = 'Assistir'; toast(msgErro(er), true); } };
 }
@@ -2233,4 +2233,351 @@ function rsBloqueio(admin, lic) {
   $('#rs-lic-x').onclick = () => { $('#rs-lic').remove(); auth.signOut(); location.reload(); };
 }
 { const _en = entrar; entrar = async function (u) { await _en(u); let n = 0; const t = setInterval(() => { if (S.emp && S.emp.nome !== undefined || ++n > 40) { clearInterval(t); rsLicenca(); } }, 250); }; }
-</script></body></html>
+</script><script>
+/* =====================================================================
+   AVISO AUTOMÁTICO AO CANDIDATO A CADA ETAPA
+   Quando o candidato muda de etapa sem mensagem (arrastar o cartão ou
+   "Mover para…"), o sistema deixa um recado no portal do candidato e
+   oferece o mesmo texto pelo WhatsApp com um toque.
+   ===================================================================== */
+const AVISO_ETAPA_PADRAO = {
+  triagem: 'Olá, {nome}! Recebemos sua candidatura para {vaga} e seu perfil está em análise. Avisaremos aqui quando houver novidade.',
+  teste: 'Olá, {nome}! Você avançou para a etapa de teste da vaga de {vaga}. Fique de olho aqui no portal: o teste aparece nesta página.',
+  entrevista: 'Olá, {nome}! Você avançou para a etapa de entrevista da vaga de {vaga}. Em breve combinamos o dia e o horário por aqui.'
+};
+const avisoEtapaCfg = () => ({ ativo: true, ...AVISO_ETAPA_PADRAO, ...((S.emp && S.emp.avisoEtapa) || {}) });
+function textoAvisoEtapa(a, etapa) {
+  const t = avisoEtapaCfg()[etapa]; if (!t) return '';
+  const v = (S.d.vagas || []).find(x => x.id === a.vagaId) || {};
+  return String(t).replace(/\{(\w+)\}/g, (_, k) => ({ nome: primeiro(a.perfil && a.perfil.nome || ''), vaga: v.titulo || a.vagaTitulo || 'a vaga', empresa: S.emp.nome || '' })[k] ?? '');
+}
+(function () {
+  const P_ = Object.getPrototypeOf(db.doc('empresas/_')), orig = P_.update;
+  P_.update = function (dados) {
+    try {
+      const m = /^empresas\/([^/]+)\/apps\/([^/]+)$/.exec(this.path || '');
+      if (m && dados && typeof dados === 'object' && !Array.isArray(dados) && typeof dados.etapa === 'string' && !('mensagens' in dados) && AVISO_ETAPA_PADRAO[dados.etapa] && avisoEtapaCfg().ativo !== false) {
+        const a = (S.d.apps || []).find(x => x.id === m[2]);
+        if (a && (a.etapa || '') !== dados.etapa && !a.anonimizado) {
+          const t = textoAvisoEtapa(a, dados.etapa);
+          if (t) { dados = { ...dados, mensagens: [...(a.mensagens || []), { de: 'rh', t, por: (S.me && S.me.nome) || 'RH', em: agora(), auto: true }] };
+            const r = orig.call(this, dados); r.then(() => cartaoAvisoEtapa(a, t)).catch(() => { }); return r; }
+        }
+      }
+    } catch (e) { console.warn('[aviso etapa]', e); }
+    return orig.apply(this, arguments);
+  };
+})();
+function cartaoAvisoEtapa(a, t) {
+  $$('.av-et').forEach(x => x.remove()); const tel = a.perfil && a.perfil.telefone, w = tel ? waLink(tel, t) : '';
+  const d = document.createElement('div'); d.className = 'av-et'; d.setAttribute('role', 'status');
+  d.innerHTML = `<div><b>${esc(primeiro(a.perfil.nome))} foi avisado(a) no portal do candidato.</b><span>${esc(t)}</span></div>${w ? `<a class="btn sm" href="${esc(w)}" target="_blank" rel="noopener">Mandar também no WhatsApp</a>` : ''}<button type="button" aria-label="Fechar">×</button>`;
+  document.body.appendChild(d); d.querySelector('button').onclick = () => d.remove(); const a2 = d.querySelector('a'); if (a2) a2.onclick = () => setTimeout(() => d.remove(), 300);
+  setTimeout(() => d.remove(), 14000);
+}
+document.head.insertAdjacentHTML('beforeend', `<style>.av-et{position:fixed;right:18px;bottom:96px;z-index:9998;width:min(420px,calc(100vw - 32px));display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:var(--card,#fff);color:var(--ink,#0b1530);border:1px solid var(--line,#dfe5f0);border-left:4px solid #22a06b;border-radius:14px;padding:12px 14px;box-shadow:0 16px 40px rgba(10,20,50,.2)}
+.av-et div{flex:1;min-width:200px;display:grid;gap:3px}.av-et span{font-size:13px;opacity:.75}.av-et>button{background:none;border:0;font-size:20px;cursor:pointer;color:inherit;position:absolute;top:6px;right:10px}</style>`);
+/* configurações: textos dos avisos automáticos */
+if (typeof vConfig === 'function') { const _vc = vConfig; vConfig = function (el, aba) { _vc.apply(this, arguments); try {
+  if ((aba || S.cfgAba) !== 'msg') return; const w = $('#cf-b', el); if (!w || $('#ae-p', w)) return; const c = avisoEtapaCfg(), rot = { triagem: 'Ao ir para Triagem', teste: 'Ao ir para Teste', entrevista: 'Ao ir para Entrevista' };
+  w.insertAdjacentHTML('beforeend', `<section class="panel" id="ae-p"><h2 style="margin-bottom:4px">Aviso automático ao mudar de etapa</h2><p class="hint" style="margin-top:0">Quando você arrasta o cartão ou usa "Mover para…", o candidato recebe este recado no portal, e aparece um botão para mandar o mesmo texto no WhatsApp. Use {nome}, {vaga} e {empresa}.</p>
+    <label class="row" style="gap:8px;margin-bottom:10px"><input type="checkbox" id="ae-on" ${c.ativo !== false ? 'checked' : ''}> Avisar o candidato automaticamente</label>
+    ${Object.entries(rot).map(([k, t]) => `<div class="fld"><label for="ae-${k}">${t}</label><textarea class="inp" id="ae-${k}">${esc(c[k])}</textarea></div>`).join('')}<div class="row end"><button class="btn" id="ae-ok">Salvar avisos</button></div></section>`);
+  $('#ae-ok', w).onclick = async () => { const v = { ativo: $('#ae-on', w).checked }; Object.keys(rot).forEach(k => v[k] = $(`#ae-${k}`, w).value.trim() || AVISO_ETAPA_PADRAO[k]);
+    try { await emp(S.eid).update({ avisoEtapa: v }); S.emp.avisoEtapa = v; log('Atualizou os avisos automáticos de etapa'); toast('Avisos salvos.'); } catch (e) { toast(msgErro(e), true); } };
+} catch (e) { console.warn(e); } }; }
+</script>
+
+<script>
+/* =====================================================================
+   LOTE 25 (recrutador): arte pronta da vaga, ranking automático dos
+   candidatos e triagem por áudio com transcrição e nota da IA
+   ===================================================================== */
+/* ---------- Arte da vaga para Instagram e WhatsApp ---------- */
+function linhasTexto(x, t, larg) { const pal = String(t || '').split(/\s+/), l = []; let at = ''; pal.forEach(p => { const tt = at ? at + ' ' + p : p; if (x.measureText(tt).width > larg && at) { l.push(at); at = p; } else at = tt; }); if (at) l.push(at); return l; }
+function corClara(hex, k) { const n = parseInt(String(hex || '#14203D').replace('#', ''), 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255, f = c => Math.round(c + (255 - c) * k); return `rgb(${f(r)},${f(g)},${f(b)})`; }
+async function desenharArte(v, fmt) {
+  const W = 1080, H = fmt === 'story' ? 1920 : 1350, c = document.createElement('canvas'); c.width = W; c.height = H; const x = c.getContext('2d');
+  const car = S.emp.carreira || {}, cor = car.cor || '#14203D', ac = '#3B82F6', F = (p, w = 700) => `${w} ${p}px Archivo, "Bricolage Grotesque", Arial, sans-serif`;
+  try { await document.fonts.load(F(80, 800)); await document.fonts.load(F(40, 600)); } catch (e) { }
+  const g = x.createLinearGradient(0, 0, W, H); g.addColorStop(0, cor); g.addColorStop(1, '#050B1E'); x.fillStyle = g; x.fillRect(0, 0, W, H);
+  x.globalAlpha = .1; x.fillStyle = '#fff'; for (let i = 0; i < 6; i++) { x.beginPath(); x.arc(W - 80 + i * 0, -40, 260 + i * 120, 0, Math.PI * 2); x.lineWidth = 2; x.strokeStyle = '#fff'; x.stroke(); } x.globalAlpha = 1;
+  const M = 90; let y = fmt === 'story' ? 220 : 130;
+  x.fillStyle = 'rgba(255,255,255,.12)'; const emp = String(S.emp.nome || 'Nossa empresa').toUpperCase(); x.font = F(30, 700); const ew = x.measureText(emp).width + 56; x.beginPath(); x.roundRect(M, y - 46, ew, 66, 33); x.fill(); x.fillStyle = '#fff'; x.fillText(emp, M + 28, y);
+  y += 120; x.fillStyle = corClara(ac, .35); x.font = F(44, 700); x.fillText('ESTAMOS CONTRATANDO', M, y);
+  y += 30; x.fillStyle = '#fff'; x.font = F(fmt === 'story' ? 112 : 104, 800); linhasTexto(x, v.titulo || 'Vaga', W - M * 2).slice(0, 3).forEach(l => { y += fmt === 'story' ? 118 : 108; x.fillText(l, M, y); });
+  y += 96; const chips = [v.loja || v.local, v.contrato, v.modalidade].filter(Boolean).slice(0, 3); x.font = F(32, 600); let cx = M;
+  chips.forEach(t => { const w2 = x.measureText(t).width + 48; if (cx + w2 > W - M) { cx = M; y += 72; } x.fillStyle = 'rgba(255,255,255,.14)'; x.beginPath(); x.roundRect(cx, y - 44, w2, 62, 31); x.fill(); x.fillStyle = '#E6EEFF'; x.fillText(t, cx + 24, y); cx += w2 + 14; });
+  if (v.salario) { y += 110; x.fillStyle = '#A7F3D0'; x.font = F(60, 800); linhasTexto(x, /^\d/.test(v.salario) ? 'R$ ' + v.salario : v.salario, W - M * 2).slice(0, 2).forEach((l, i) => { x.fillText(l, M, y + i * 68); }); y += 40; }
+  const desc = String(v.descricao || '').split(/\n|\.\s/).map(s => s.trim()).filter(Boolean).slice(0, fmt === 'story' ? 4 : 3);
+  if (desc.length) { y += 70; x.font = F(34, 500); x.fillStyle = '#D6E2FF'; desc.forEach(d => { linhasTexto(x, '• ' + d.replace(/\.$/, ''), W - M * 2).slice(0, 2).forEach(l => { x.fillText(l, M, y); y += 48; }); y += 6; }); }
+  const qrS = fmt === 'story' ? 300 : 260, qy = fmt === 'story' ? Math.min(H - qrS - 260, Math.max(y + 180, 1180)) : H - qrS - 110;
+  try { const qr = await qrDataURL(linkPortal(v.id) + '&origem=Instagram'), im = await new Promise((ok, er) => { const i = new Image(); i.onload = () => ok(i); i.onerror = er; i.src = qr; });
+    x.fillStyle = '#fff'; x.beginPath(); x.roundRect(M, qy, qrS, qrS, 28); x.fill(); x.drawImage(im, M + 18, qy + 18, qrS - 36, qrS - 36); } catch (e) { }
+  x.fillStyle = '#fff'; x.font = F(46, 800); x.fillText('Candidate-se agora', M + qrS + 44, qy + qrS / 2 - 20); x.font = F(30, 500); x.fillStyle = '#C7D6FF';
+  linhasTexto(x, fmt === 'story' ? 'Aponte a câmera para o código ou toque no link da bio' : 'Aponte a câmera do celular para o código ou use o link da legenda', W - M * 2 - qrS - 44).slice(0, 3).forEach((l, i) => x.fillText(l, M + qrS + 44, qy + qrS / 2 + 30 + i * 40));
+  return c;
+}
+async function arteVaga(v) {
+  if (!v || !v.id) return; modal(`Arte da vaga · ${v.titulo}`, '<p class="hint" style="margin-top:0">Gerando as imagens…</p>', { size: 'lg' });
+  try { const [feed, story] = await Promise.all([desenharArte(v, 'feed'), desenharArte(v, 'story')]), uF = feed.toDataURL('image/png'), uS = story.toDataURL('image/png'), link = linkPortal(v.id) + '&origem=Instagram';
+    const leg = `🚀 Vaga aberta: ${v.titulo}${v.loja || v.local ? ` na ${v.loja || v.local}` : ''}!\n${v.salario ? `💰 ${/^\d/.test(v.salario) ? 'R$ ' + v.salario : v.salario}\n` : ''}${v.contrato ? `📄 ${v.contrato}\n` : ''}\nCandidate-se pelo link: ${link}\n\n#vagas #emprego${S.emp.cidade ? ' #' + String(S.emp.cidade).split('/')[0].replace(/\s+/g, '').toLowerCase() : ''} #trabalheconosco`;
+    closeModal(true);
+    modal(`Arte da vaga · ${v.titulo}`, `<div class="arte-g"><figure><img src="${uF}" alt="Arte da vaga para o feed do Instagram"><figcaption><b>Feed (4:5)</b><a class="btn sm" href="${uF}" download="vaga-${slugEt(v.titulo)}-feed.png">Baixar</a></figcaption></figure><figure><img src="${uS}" alt="Arte da vaga para stories e status do WhatsApp"><figcaption><b>Stories e status (9:16)</b><a class="btn sm" href="${uS}" download="vaga-${slugEt(v.titulo)}-stories.png">Baixar</a></figcaption></figure></div>
+      <div class="fld" style="margin-top:12px"><label for="ar-l">Legenda pronta</label><textarea class="inp" id="ar-l" rows="6">${esc(leg)}</textarea></div><p class="hint">O código QR e o link levam direto para a vaga. Quem se candidatar por eles aparece com a origem "Instagram".</p>`,
+      { size: 'lg', foot: `<button class="btn sec" id="ar-c">Copiar legenda</button><a class="btn" href="https://wa.me/?text=${encodeURIComponent(leg)}" target="_blank" rel="noopener">Mandar no WhatsApp</a>`, onMount: m => { $('#ar-c', m).onclick = () => { const t = $('#ar-l', m); t.select(); try { navigator.clipboard.writeText(t.value); } catch (e) { document.execCommand('copy'); } toast('Legenda copiada.'); }; } });
+    log(`Gerou a arte da vaga ${v.titulo}`);
+  } catch (e) { closeModal(true); toast('Não foi possível gerar a arte: ' + (e.message || e), true); }
+}
+if (typeof slugEt !== 'function') window.slugEt = t => String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+if (typeof vVagasLista === 'function') { const _vvl = vVagasLista; vVagasLista = function (el) { _vvl.apply(this, arguments); try { $$('[data-vq]', el).forEach(b => { if (b.parentElement.querySelector('[data-va]')) return; b.insertAdjacentHTML('afterend', `<button class="btn ghost sm" data-va="${b.dataset.vq}">Arte para Instagram e WhatsApp</button>`); });
+  $$('[data-va]', el).forEach(b => b.onclick = () => arteVaga(vagaDe(b.dataset.va)));
+  $$('[data-vc]', el).forEach(b => { if (b.nextElementSibling && b.nextElementSibling.matches && b.nextElementSibling.matches('[data-va2]')) return; b.insertAdjacentHTML('afterend', ` <button class="btn ghost sm" data-va2="${b.dataset.vc}" title="Arte para Instagram e WhatsApp" aria-label="Arte da vaga para Instagram e WhatsApp">Arte</button>`); });
+  $$('[data-va2]', el).forEach(b => b.onclick = () => arteVaga(vagaDe(b.dataset.va2))); } catch (e) { console.warn(e); } }; }
+
+/* ---------- Ranking automático dos candidatos ---------- */
+function pontuar(a) {
+  const pv = privDe(a.id), n = notas(a), comp = [];
+  if (pv.ia && pv.ia.aderencia != null) comp.push(['Análise da IA', pv.ia.aderencia * 10, 30]);
+  if (n.tri && n.tri.pct != null) comp.push(['Perguntas da inscrição', n.tri.pct, 20]);
+  const ts = (n.testes || []).filter(t => t.pct != null); if (ts.length) comp.push(['Testes', ts.reduce((s, t) => s + t.pct, 0) / ts.length, 20]);
+  if (n.ent != null) comp.push(['Entrevista', Math.min(100, n.ent / 5 * 100), 25]);
+  if (pv.gravIA && pv.gravIA.media != null) comp.push(['Respostas gravadas', pv.gravIA.media * 10, 15]);
+  const peso = comp.reduce((s, x) => s + x[2], 0), nota = peso ? Math.round(comp.reduce((s, x) => s + x[1] * x[2], 0) / peso) : null;
+  const elim = n.tri && n.tri.elim; return { nota, comp, elim, conf: comp.length };
+}
+function painelRanking(el) {
+  if (!S.vagaSel || !ehEditor() || $('#rk-p', el)) return; const v = vagaDe(S.vagaSel), l = S.d.apps.filter(a => a.vagaId === S.vagaSel && !final(a) && !a.anonimizado).map(a => ({ a, ...pontuar(a) })).sort((x, y) => (y.nota ?? -1) - (x.nota ?? -1) || y.conf - x.conf);
+  if (!l.length) return; const semIA = l.filter(x => !(privDe(x.a.id).ia));
+  const sec = document.createElement('section'); sec.className = 'panel'; sec.id = 'rk-p';
+  sec.innerHTML = `<div class="row" style="gap:10px;flex-wrap:wrap;margin-bottom:6px"><div style="flex:1;min-width:220px"><h2 style="margin:0">Ranking · ${esc(v.titulo || '')}</h2><p class="hint" style="margin:2px 0 0">Junta a análise da IA, as perguntas, os testes, a entrevista e as respostas gravadas. Quanto mais etapas, mais confiável.</p></div>${semIA.length && iaKey() ? `<button class="btn sec sm" id="rk-ia">Analisar ${semIA.length} com IA</button>` : ''}</div>
+    <ol class="rk-l">${l.slice(0, 10).map((x, i) => `<li data-rk="${x.a.id}" tabindex="0"><span class="rk-n ${i < 3 && x.nota != null ? 'rk-top' : ''}">${i + 1}º</span><div class="t"><b>${esc(nomeVis(x.a))}</b><span class="hint">${esc(ETAPA[etapaV(x.a)] || '')}${x.elim ? ' · <b style="color:var(--bad)">eliminatória errada</b>' : ''}</span><div class="rk-c">${x.comp.map(c => `<span class="pill">${esc(c[0])} ${Math.round(c[1])}</span>`).join('') || '<span class="hint">Ainda sem notas</span>'}</div></div><b class="rk-s">${x.nota == null ? '—' : x.nota}</b></li>`).join('')}</ol>`;
+  el.prepend(sec);
+  $$('[data-rk]', sec).forEach(li => { li.onclick = () => abrirCand(li.dataset.rk); li.onkeydown = e => { if (e.key === 'Enter') abrirCand(li.dataset.rk); }; });
+  const b = $('#rk-ia', sec); if (b) b.onclick = async () => { b.disabled = true; let k = 0; for (const x of semIA) { b.textContent = `Analisando ${++k} de ${semIA.length}…`; try { const ia = await analisarIA(x.a); const p = privDe(x.a.id); p.ia = ia; if (!S.d.priv.includes(p)) S.d.priv.push(p); } catch (e) { toast(e.message, true); break; } } toast('Análise concluída.'); render(); };
+}
+if (typeof vCands === 'function') { const _vcR = vCands; vCands = function (el) { const r = _vcR.apply(this, arguments); try { painelRanking(el); } catch (e) { console.warn(e); } return r; }; }
+
+/* ---------- Triagem por áudio: transcrição e nota da IA ---------- */
+async function transcrever(blob, nome) {
+  const ks = [...new Set([iaKey(), typeof SUP_IA !== 'undefined' ? SUP_IA.groq : ''].filter(Boolean))]; if (!ks.length) throw new Error('Configure a chave da IA em Configurações > Inteligência artificial.');
+  for (const k of ks) for (const md of ['whisper-large-v3-turbo', 'whisper-large-v3']) {
+    const fd = new FormData(); fd.append('file', blob, nome); fd.append('model', md); fd.append('language', 'pt'); fd.append('response_format', 'json');
+    try { const r = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST', headers: { Authorization: 'Bearer ' + k }, body: fd }); if (r.ok) return String((await r.json()).text || '').trim(); if (r.status === 401) break; } catch (e) { }
+  }
+  throw new Error('Não foi possível transcrever o áudio agora. Tente de novo em instantes.');
+}
+async function avaliarGravacao(a) {
+  const g = a.gravacao, v = vagaDe(a.vagaId), urls = await videosDe(a), tr = {};
+  for (const [q, u] of Object.entries(urls)) { const b = await (await fetch(u)).blob(); tr[q] = await transcrever(b, `resposta-${q}.${/audio/.test(b.type) ? 'webm' : 'webm'}`); }
+  if (!Object.keys(tr).length) throw new Error('Nenhuma resposta recebida ainda.');
+  const sis = 'Você avalia respostas faladas (transcritas) de candidatos a vagas de comércio no Brasil. Avalie clareza, coerência, exemplos concretos e aderência à vaga. Ignore sotaque, erros de transcrição, vícios de linguagem e qualquer característica pessoal (Lei 9.029/1995). Responda SOMENTE JSON: {"notas":{"0":{"nota":0-10,"motivo":"1 frase"}},"resumo":"até 2 frases"}.';
+  const txt = `VAGA: ${v.titulo || a.vagaTitulo}\nRequisitos: ${v.requisitos || '-'}\n\n${g.perguntas.map((p, i) => `PERGUNTA ${i}: ${p}\nRESPOSTA ${i}: ${tr[i] || '(sem resposta)'}`).join('\n\n')}`;
+  let j = {}; try { const out = await groq([{ role: 'system', content: sis }, { role: 'user', content: txt }]); j = JSON.parse((out.match(/\{[\s\S]*\}/) || ['{}'])[0]); } catch (e) { }
+  const notasG = {}; Object.keys(tr).forEach(q => { const x = (j.notas || {})[q]; if (x) notasG[q] = { nota: Math.max(0, Math.min(10, Math.round(+x.nota * 2) / 2 || 0)), motivo: String(x.motivo || '').slice(0, 200) }; });
+  const vs = Object.values(notasG).map(x => x.nota), gravIA = { transcricoes: tr, notas: notasG, media: vs.length ? Math.round(vs.reduce((s, x) => s + x, 0) / vs.length * 10) / 10 : null, resumo: String(j.resumo || '').slice(0, 400), em: agora(), por: S.me.nome };
+  await sub(S.eid, 'priv').doc(a.id).set({ gravIA }, { merge: true }); log(`Transcreveu e avaliou as respostas gravadas de ${a.perfil.nome}`); return gravIA;
+}
+if (typeof painelGravacao === 'function') { const _pg = painelGravacao; painelGravacao = function (m, a) { _pg.apply(this, arguments); try { const pn = $('#gv-pn', m), g = a.gravacao; if (!pn || !g || $('#gv-ia', m)) return; const resp = g.respostas || {}; if (!Object.keys(resp).length) return;
+  const gi = privDe(a.id).gravIA, mostra = x => `<div class="gv-ia">${x.media != null ? `<b>Nota da IA: ${String(x.media).replace('.', ',')}/10</b>` : ''}${x.resumo ? `<p style="margin:4px 0">${esc(x.resumo)}</p>` : ''}${g.perguntas.map((p, i) => x.transcricoes[i] ? `<details><summary>${i + 1}. ${esc(p)}${x.notas[i] ? ` · <b>${String(x.notas[i].nota).replace('.', ',')}</b>` : ''}</summary><p style="margin:6px 0 0">“${esc(x.transcricoes[i])}”</p>${x.notas[i] ? `<p class="hint" style="margin:4px 0 0">${esc(x.notas[i].motivo)}</p>` : ''}</details>` : '').join('')}<p class="hint" style="margin:6px 0 0">Transcrição automática. Ouça a resposta antes de decidir.</p></div>`;
+  pn.insertAdjacentHTML('beforeend', `<div id="gv-ia">${gi ? mostra(gi) : ''}${ehEditor() && iaKey() ? `<button class="btn ${gi ? 'ghost' : ''} sm" id="gv-ia-b" style="margin-top:8px">${gi ? 'Transcrever de novo' : 'Transcrever e dar nota com IA'}</button>` : ''}</div>`);
+  const b = $('#gv-ia-b', m); if (b) b.onclick = async () => { b.disabled = true; b.textContent = 'Ouvindo as respostas…'; try { const x = await avaliarGravacao(a); const p = privDe(a.id); p.gravIA = x; if (!S.d.priv.includes(p)) S.d.priv.push(p); $('#gv-ia', m).innerHTML = mostra(x); toast('Respostas transcritas e avaliadas.'); } catch (e) { toast(e.message, true); b.disabled = false; b.textContent = 'Transcrever e dar nota com IA'; } };
+} catch (e) { console.warn(e); } }; }
+document.head.insertAdjacentHTML('beforeend', `<style>
+.arte-g{display:grid;grid-template-columns:1fr .6fr;gap:14px;align-items:start}.arte-g figure{margin:0;display:grid;gap:8px}.arte-g img{width:100%;border-radius:12px;box-shadow:0 8px 24px rgba(10,20,50,.18)}.arte-g figcaption{display:flex;align-items:center;gap:8px;justify-content:space-between}
+@media(max-width:640px){.arte-g{grid-template-columns:1fr}}
+.rk-l{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}.rk-l li{display:flex;gap:12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer}.rk-l li:hover{background:var(--pri-s,#EEF3FF)}
+.rk-l .t{flex:1;display:grid;gap:2px;min-width:0}.rk-c{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}.rk-c .pill{font-size:11.5px}.rk-n{flex:0 0 36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:800;background:var(--line);font-size:13px}.rk-n.rk-top{background:#FDE68A;color:#78350F}.rk-s{font-size:26px;font-variant-numeric:tabular-nums;min-width:52px;text-align:right}
+.gv-ia{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--pri-s,#EEF3FF)}.gv-ia details{margin-top:6px}.gv-ia summary{cursor:pointer}
+</style>`);
+</script>
+
+<script>
+/* =====================================================================
+   LOTE 26 (Recrutador): entrevista pelo WhatsApp com lembrete, divulgar
+   a vaga em vários sites, banco de talentos que avisa sozinho e
+   simulação de atendimento corrigida pela IA.
+   ===================================================================== */
+const appDe = id => S.d.apps.find(a => a.id === id);
+const telDe = a => String((a && a.perfil && a.perfil.telefone) || '').replace(/\D/g, '');
+const amanhaISO = () => iso(addD(new Date(), 1));
+const horaEnt = e => new Date(e.inicio).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+const diaEnt = e => new Date(e.inicio).toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' });
+
+/* ---------- 1. Entrevista pelo WhatsApp ---------- */
+function msgEntrevista(e, lembrete) {
+  const a = appDe(e.appId) || {}, nome = primeiro(e.candNome || (a.perfil || {}).nome), onde = e.tipo === 'video' ? `por vídeo. O link da sala aparece no portal do candidato 30 minutos antes: ${linkPortal(a.vagaId || '')}` : e.tipo === 'presencial' ? `presencial${e.local ? `, em ${e.local}` : ''}` : (e.tipo === 'telefone' ? 'por telefone' : '');
+  return lembrete ? `Olá, ${nome}! Passando para lembrar da sua entrevista para a vaga de ${e.vagaTitulo} ${new Date(e.inicio).toISOString().slice(0, 10) === iso(new Date()) ? 'hoje' : 'amanhã'}, às ${horaEnt(e)}, ${onde}. Se não puder ir, responda esta mensagem para remarcarmos. ${S.emp.nome || ''}`.trim()
+    : `Olá, ${nome}! Sua entrevista para a vaga de ${e.vagaTitulo} está confirmada para ${diaEnt(e)}, às ${horaEnt(e)}, ${onde}. Qualquer imprevisto, é só responder por aqui. ${S.emp.nome || ''}`.trim();
+}
+async function marcarAvisoEnt(e, campo) { try { await sub(S.eid, 'entrevistas').doc(e.id).update({ [campo]: agora() }); e[campo] = agora(); } catch (er) { console.warn(er); } }
+function painelLembretes(el) {
+  if (!ehEditor() || $('#lb-p', el)) return; const am = amanhaISO(), hj = iso(new Date());
+  const l = S.d.ent.filter(e => e.status === 'agendada' && [hj, am].includes(new Date(e.inicio).toISOString().slice(0, 10)) && new Date(e.inicio).getTime() > Date.now()).sort((a, b) => a.inicio.localeCompare(b.inicio)); if (!l.length) return;
+  const sec = document.createElement('section'); sec.className = 'panel'; sec.id = 'lb-p'; const falta = l.filter(e => !e.lembreteEm).length;
+  sec.innerHTML = `<div class="row" style="gap:10px;flex-wrap:wrap"><div style="flex:1;min-width:220px"><h2 style="margin:0">Lembretes pelo WhatsApp</h2><p class="hint" style="margin:2px 0 0">${falta ? `${falta} entrevista(s) de hoje e amanhã ainda sem lembrete. Lembrar na véspera reduz muito as faltas.` : 'Todos os candidatos de hoje e amanhã já foram lembrados.'}</p></div></div>
+    <ul class="list" style="margin-top:8px">${l.map(e => { const t = telDe(appDe(e.appId)); return `<li><div class="t"><div><b>${horaEnt(e)}</b> · ${esc(e.candNome)} · ${esc(e.vagaTitulo)}</div><div>${esc(diaEnt(e))}${e.lembreteEm ? ' · <span class="pill ok">lembrete enviado</span>' : ''}</div></div>${t ? `<a class="btn ${e.lembreteEm ? 'sec' : ''} sm" data-lb="${e.id}" href="${waLink(t, msgEntrevista(e, true))}" target="_blank" rel="noopener">${e.lembreteEm ? 'Lembrar de novo' : 'Lembrar no WhatsApp'}</a>` : '<span class="hint">sem telefone</span>'}</li>`; }).join('')}</ul>`;
+  el.prepend(sec);
+  $$('[data-lb]', sec).forEach(b => b.addEventListener('click', () => { const e = S.d.ent.find(x => x.id === b.dataset.lb); if (e) marcarAvisoEnt(e, 'lembreteEm').then(() => { b.textContent = 'Lembrar de novo'; b.classList.add('sec'); }); }));
+}
+function botoesWhatsEnt(el) {
+  $$('[data-rot]', el).forEach(b => { const e = S.d.ent.find(x => x.id === b.dataset.rot); if (!e || e.status !== 'agendada' || b.parentElement.querySelector('[data-ew]')) return; const t = telDe(appDe(e.appId)); if (!t) return;
+    b.insertAdjacentHTML('beforebegin', `<a class="btn sec sm" data-ew="${e.id}" href="${waLink(t, msgEntrevista(e, false))}" target="_blank" rel="noopener" title="Confirmar a entrevista no WhatsApp">${e.confirmadoWaEm ? 'WhatsApp ✓' : 'Confirmar no WhatsApp'}</a>`); });
+  $$('[data-ew]', el).forEach(b => b.addEventListener('click', () => { const e = S.d.ent.find(x => x.id === b.dataset.ew); if (e) marcarAvisoEnt(e, 'confirmadoWaEm'); }));
+}
+if (typeof vEnt === 'function') { const _veW = vEnt; vEnt = function (el, aba) { const r = _veW.apply(this, arguments); try { if ((S.entAba || 'prox') === 'prox') { painelLembretes(el); botoesWhatsEnt(el); } } catch (e) { console.warn(e); } return r; }; }
+/* convite para escolher o horário também pelo WhatsApp */
+if (typeof convidarHorario === 'function') {
+  const _chW = convidarHorario;
+  convidarHorario = function (a) {
+    const r = _chW.apply(this, arguments);
+    try {
+      const m = [...document.querySelectorAll('.modal')].pop(), ok = m && $('#cv-ok', m), t = telDe(a); if (!ok || !t) return r;
+      $('#cv-m', m).insertAdjacentHTML('afterend', '<label class="row hint" style="gap:6px;margin-top:8px"><input type="checkbox" id="cv-wa" checked> Mandar também no WhatsApp do candidato</label>');
+      ok.addEventListener('click', () => { if ($('#cv-wa', m) && $('#cv-wa', m).checked) window.open(waLink(t, `${$('#cv-m', m).value.trim()}\n\nEscolha aqui, em "Minhas candidaturas": ${linkPortal(a.vagaId)}`), '_blank', 'noopener'); }, true);
+    } catch (e) { console.warn(e); }
+    return r;
+  };
+}
+
+/* ---------- 2. Divulgar a vaga em vários sites ---------- */
+const CANAIS = [
+  ['whats', 'WhatsApp', 'Grupos de emprego da cidade e o seu status.'],
+  ['face', 'Facebook', 'Grupos de vagas e a página da loja.'],
+  ['linkedin', 'LinkedIn', 'Bom para cargos de gerência e escritório.'],
+  ['insta', 'Instagram', 'Post e story com a arte pronta e QR code.'],
+  ['indeed', 'Indeed', 'Anúncio gratuito. Copie o texto e cole no site.'],
+  ['infojobs', 'InfoJobs', 'Anúncio gratuito. Copie o texto e cole no site.'],
+  ['telegram', 'Telegram', 'Canais e grupos de vagas.'],
+  ['email', 'E-mail', 'Para escolas, cursos e parceiros.']];
+function textoAnuncio(v) {
+  const l = [`VAGA: ${v.titulo}`, v.local ? `Local: ${v.local}` : '', v.contrato ? `Contratação: ${v.contrato}` : '', v.salario ? `Salário: ${v.salario}` : '', '', v.descricao ? `O que você vai fazer:\n${v.descricao}` : '', v.requisitos ? `\nO que procuramos:\n${v.requisitos}` : '', '', `Empresa: ${S.emp.nome || ''}`];
+  return l.filter((x, i) => x !== '' || (l[i - 1] && l[i - 1] !== '')).join('\n').trim();
+}
+const ORIG_CANAL = { whats: 'WhatsApp', face: 'Facebook', insta: 'Instagram', linkedin: 'LinkedIn', indeed: 'Indeed', infojobs: 'InfoJobs', telegram: 'Telegram', email: 'E-mail', banco: 'Banco de talentos' };
+const linkCanal = (v, c) => { const u = new URL(linkPortal(v.id)); u.searchParams.set('origem', ORIG_CANAL[c] || c); return u.toString(); };
+function divulgarVaga(v) {
+  const txt = textoAnuncio(v), cur = t => `${v.titulo} em ${S.emp.nome || ''}${v.local ? ' · ' + v.local : ''}`;
+  const url = c => {
+    const lk = linkCanal(v, c), msg = `${txt}\n\nInscreva-se pelo link: ${lk}`;
+    return { whats: 'https://wa.me/?text=' + encodeURIComponent(msg), face: 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(lk), linkedin: 'https://www.linkedin.com/sharing/share-offsite/?url=' + encodeURIComponent(lk),
+      indeed: 'https://employers.indeed.com/', infojobs: 'https://empresa.infojobs.com.br/', telegram: 'https://t.me/share/url?url=' + encodeURIComponent(lk) + '&text=' + encodeURIComponent(`Vaga: ${cur()}`),
+      email: 'mailto:?subject=' + encodeURIComponent('Vaga: ' + cur()) + '&body=' + encodeURIComponent(msg) }[c];
+  };
+  const feitos = v.divulgacao || {};
+  modal(`Divulgar a vaga: ${v.titulo}`, `<p class="hint" style="margin-top:0">Cada site recebe um link próprio. Assim, em Relatórios, você vê de onde vieram os candidatos e os contratados.</p>
+    <div class="dv-g">${CANAIS.map(([k, n, d]) => `<div class="dv-c"><div><b>${n}</b>${feitos[k] ? ' <span class="pill ok">divulgada</span>' : ''}<span>${d}</span></div><div class="row" style="gap:6px;flex-wrap:wrap">${k === 'insta' ? `<button class="btn sm" data-dv-arte>Gerar arte</button>` : `<a class="btn sm" data-dv="${k}" href="${url(k)}" target="_blank" rel="noopener">${['indeed', 'infojobs'].includes(k) ? 'Abrir o site' : 'Publicar'}</a>`}${['indeed', 'infojobs', 'insta', 'face'].includes(k) ? `<button class="btn sec sm" data-dv-cp="${k}">Copiar texto</button>` : ''}</div></div>`).join('')}</div>
+    <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:700">Ver o texto do anúncio</summary><textarea class="inp" id="dv-t" rows="9" style="margin-top:8px">${esc(txt)}</textarea></details>`,
+    { size: 'lg', foot: '<button class="btn sec" data-close>Fechar</button>', onMount: m => {
+      const marca = async k => { try { const d = { ...(v.divulgacao || {}), [k]: agora() }; await sub(S.eid, 'vagas').doc(v.id).update({ divulgacao: d }); v.divulgacao = d; log(`Divulgou a vaga ${v.titulo} no ${(CANAIS.find(c => c[0] === k) || [])[1] || k}`); } catch (e) { console.warn(e); } };
+      $$('[data-dv]', m).forEach(b => b.addEventListener('click', () => { const k = b.dataset.dv; if (['indeed', 'infojobs'].includes(k)) { try { navigator.clipboard.writeText(`${$('#dv-t', m).value}\n\nInscreva-se: ${linkCanal(v, k)}`); toast('Texto copiado. Cole no anúncio do site que abriu.'); } catch (e) { } } marca(k); }));
+      $$('[data-dv-cp]', m).forEach(b => b.onclick = async () => { const k = b.dataset.dvCp; try { await navigator.clipboard.writeText(`${$('#dv-t', m).value}\n\nInscreva-se: ${linkCanal(v, k)}`); toast('Texto copiado com o link deste site.'); } catch (e) { toast('Não foi possível copiar. Selecione o texto do anúncio.', true); } marca(k); });
+      const ba = $('[data-dv-arte]', m); if (ba) ba.onclick = () => { marca('insta'); closeModal(); if (typeof arteVaga === 'function') arteVaga(v); };
+    } });
+}
+
+/* ---------- 3. Banco de talentos que avisa sozinho ---------- */
+const STOP = new Set('para com uma que dos das nos nas por pela pelo sem mais muito você voce vaga vagas trabalho empresa loja experiência experiencia atendimento cliente clientes'.split(' '));
+const tokens = t => [...new Set(String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3 && !STOP.has(w)))];
+function combinamComVaga(v, max = 15) {
+  const alvo = new Set([...tokens(v.titulo), ...tokens(v.titulo), ...tokens(v.area), ...tokens(v.requisitos)]), tit = tokens(v.titulo), por = {};
+  S.d.apps.filter(a => !a.anonimizado && a.candUid).forEach(a => { (por[a.candUid] = por[a.candUid] || []).push(a); });
+  const avisados = new Set(v.bancoAvisados || []), out = [];
+  Object.entries(por).forEach(([uidC, apps]) => {
+    if (apps.some(a => a.vagaId === v.id) || avisados.has(uidC)) return; const ult = apps.slice().sort((a, b) => (b.atualizadoEm || b.criadoEm || '').localeCompare(a.atualizadoEm || a.criadoEm || ''))[0];
+    if (['contratado', 'admitido'].includes(ult.etapa)) return; const p = ult.perfil || {};
+    const txt = [p.resumo, p.cargo, (p.habilidades || []).join ? (p.habilidades || []).join(' ') : p.habilidades, JSON.stringify(p.experiencias || []), apps.map(a => a.vagaTitulo).join(' '), (privDe(ult.id).tags || []).join(' ')].join(' ');
+    const tk = new Set(tokens(txt)); let sc = 0; alvo.forEach(w => { if (tk.has(w)) sc += tit.includes(w) ? 3 : 1; }); if (!sc) return;
+    const fase = apps.some(a => ['entrevista', 'teste', 'aprovado', 'proposta'].includes(a.etapa) || (a.etapa === 'reprovado' && (a.historico || []).some(h => /entrevista/i.test(h.t || '')))) ? 2 : 0;
+    let nt = null; try { nt = typeof pontuar === 'function' ? pontuar(ult).nota : null; } catch (e) { } const bonus = nt != null && nt >= 60 ? 2 : 0;
+    out.push({ uidC, a: ult, sc: sc + fase + bonus, nota: nt, fase: !!fase });
+  });
+  return out.filter(x => x.sc >= 3).sort((a, b) => b.sc - a.sc).slice(0, max);
+}
+function avisoBanco(el) {
+  if (!ehEditor() || $('#bt-av', el)) return; const lim = iso(addD(new Date(), -14));
+  const vs = S.d.vagas.filter(v => v.status === 'aberta' && (v.criadoEm || '').slice(0, 10) >= lim && !v.bancoDispensado).map(v => ({ v, l: combinamComVaga(v) })).filter(x => x.l.length);
+  if (!vs.length) return;
+  const sec = document.createElement('section'); sec.className = 'panel bt-av'; sec.id = 'bt-av';
+  sec.innerHTML = `<h2 style="margin:0 0 4px">O banco de talentos tem gente para suas vagas novas</h2><ul class="list">${vs.map(x => `<li><div class="t"><div><b>${x.l.length} pessoa(s)</b> combinam com <b>${esc(x.v.titulo)}</b></div><div>Já se candidataram antes e têm experiência parecida.</div></div><div class="row" style="gap:6px"><button class="btn sm" data-bt="${x.v.id}">Ver e convidar</button><button class="btn ghost sm" data-bt-x="${x.v.id}">Agora não</button></div></li>`).join('')}</ul>`;
+  el.prepend(sec);
+  $$('[data-bt]', sec).forEach(b => b.onclick = () => convidarBanco(vagaDe(b.dataset.bt)));
+  $$('[data-bt-x]', sec).forEach(b => b.onclick = async () => { try { await sub(S.eid, 'vagas').doc(b.dataset.btX).update({ bancoDispensado: true }); } catch (e) { } b.closest('li').remove(); if (!$('li', sec)) sec.remove(); });
+}
+function convidarBanco(v) {
+  const l = combinamComVaga(v, 30); if (!l.length) return toast('Ninguém do banco combina com esta vaga agora.');
+  modal(`Convidar do banco: ${v.titulo}`, `<p class="hint" style="margin-top:0">Quem você marcar recebe uma mensagem no portal do candidato com o link da vaga${l.some(x => telDe(x.a)) ? ' e você pode mandar também no WhatsApp' : ''}.</p>
+    <ul class="list">${l.map(x => { const p = x.a.perfil || {}; return `<li><label class="row" style="flex:1;gap:8px;align-items:flex-start;cursor:pointer"><input type="checkbox" data-bk="${x.uidC}" checked><span><b>${esc(p.nome)}</b> · ${esc(p.cidade || '')}<br><span class="hint">Última vaga: ${esc(x.a.vagaTitulo || '')}${x.fase ? ' · chegou à entrevista' : ''}${x.nota != null ? ` · nota ${x.nota}` : ''}</span></span></label>${telDe(x.a) ? `<a class="btn ghost sm" href="${waLink(telDe(x.a), `Olá, ${primeiro(p.nome)}! Aqui é da ${S.emp.nome || 'empresa'}. Abrimos a vaga de ${v.titulo} e lembramos de você. Se tiver interesse, inscreva-se: ${linkCanal(v, 'banco')}`)}" target="_blank" rel="noopener">WhatsApp</a>` : ''}</li>`; }).join('')}</ul>`,
+    { size: 'lg', foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="bk-ok">Convidar selecionados</button>', onMount: m => $('#bk-ok', m).onclick = async () => {
+      const sel = $$('[data-bk]', m).filter(x => x.checked).map(x => l.find(y => y.uidC === x.dataset.bk)); if (!sel.length) return toast('Marque ao menos uma pessoa.', true);
+      const b = $('#bk-ok', m); b.disabled = true; let n = 0;
+      for (const x of sel) { try { await sub(S.eid, 'apps').doc(x.a.id).update({ mensagens: [...(x.a.mensagens || []), { de: 'rh', t: `Olá, ${primeiro(x.a.perfil.nome)}! Abrimos a vaga de ${v.titulo} e lembramos de você. Se tiver interesse, inscreva-se pelo link: ${linkCanal(v, 'banco')}`, por: S.me.nome, em: agora() }], atualizadoEm: agora() }); n++; } catch (e) { console.warn(e); } }
+      try { await sub(S.eid, 'vagas').doc(v.id).update({ bancoAvisados: [...new Set([...(v.bancoAvisados || []), ...sel.map(x => x.uidC)])] }); } catch (e) { }
+      log(`Convidou ${n} pessoa(s) do banco de talentos para a vaga ${v.titulo}`); closeModal(); toast(`${n} convite(s) enviado(s) pelo portal do candidato.`); } });
+}
+if (typeof vVagasLista === 'function') { const _vvlD = vVagasLista; vVagasLista = function (el) { const r = _vvlD.apply(this, arguments);
+  try { $$('[data-vc]', el).forEach(b => { const row = b.parentElement; if (row.querySelector('[data-dvv]')) return; const ref = row.querySelector('[data-va2]') || b; ref.insertAdjacentHTML('afterend', ` <button class="btn ghost sm" data-dvv="${b.dataset.vc}" title="Divulgar em vários sites">Divulgar</button>`); });
+    $$('[data-dvv]', el).forEach(b => b.onclick = () => divulgarVaga(vagaDe(b.dataset.dvv))); avisoBanco(el); } catch (e) { console.warn(e); } return r; }; }
+
+/* ---------- 4. Simulação de atendimento com IA ---------- */
+function criarSimulacao() {
+  if (!iaKey() && !(typeof SUP_IA !== 'undefined' && SUP_IA.groq)) return toast('Configure a IA em Configurações para criar a simulação.', true);
+  const vs = S.d.vagas.filter(v => v.status === 'aberta');
+  modal('Simulação de atendimento com IA', `<p class="hint" style="margin-top:0">A IA cria um cliente com objeções reais. O candidato responde cada fala pelo celular, como se estivesse na loja, e a IA dá a nota de cada resposta.</p>
+    <div class="grid"><div class="fld"><label for="sm-v">Para qual vaga</label><select class="inp" id="sm-v">${opts([['', 'Vendas em geral'], ...vs.map(v => [v.id, v.titulo])], vs[0] ? vs[0].id : '')}</select></div>
+    <div class="fld"><label for="sm-p">O que a loja vende</label><input class="inp" id="sm-p" value="${esc(S.emp.segmento || 'celulares e acessórios')}"></div>
+    <div class="fld"><label for="sm-c">Tipo de cliente</label><select class="inp" id="sm-c">${opts([['achou', 'Achou mais barato na internet'], ['indeciso', 'Indeciso entre dois produtos'], ['apressado', 'Apressado e impaciente'], ['reclama', 'Voltou reclamando de um defeito'], ['misto', 'Um pouco de tudo']], 'misto')}</select></div>
+    <div class="fld"><label for="sm-n">Quantas falas</label><select class="inp" id="sm-n">${opts([['4', '4 (rápido)'], ['5', '5'], ['6', '6 (completo)']], '5')}</select></div></div>`,
+    { foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="sm-ok">Criar com IA</button>', onMount: m => $('#sm-ok', m).onclick = async () => {
+      const v = vagaDe($('#sm-v', m).value) || {}, b = $('#sm-ok', m); b.disabled = true; b.textContent = 'Criando…';
+      try {
+        const sis = 'Você cria testes práticos de atendimento para lojas brasileiras. Responda só em JSON.';
+        const pedido = `Crie uma simulação de atendimento para ${v.titulo ? 'a vaga de ' + v.titulo : 'vendedor(a)'} numa loja que vende ${$('#sm-p', m).value}. Tipo de cliente: ${$('#sm-c', m).selectedOptions[0].textContent}. Gere ${$('#sm-n', m).value} falas do cliente, em sequência, como uma conversa real na loja, em português do Brasil simples. Para cada fala, liste o que uma boa resposta do vendedor deve conter.
+Formato: {"titulo": "Simulação: ...", "cenario": "frase curta explicando a situação para o candidato", "falas": [{"cliente": "fala do cliente", "bom": ["ponto 1", "ponto 2", "ponto 3"]}]}`;
+        const j = JSON.parse(String(await groq([{ role: 'system', content: sis }, { role: 'user', content: pedido }])).replace(/^```json|```$/g, '').trim());
+        const falas = (j.falas || []).filter(f => f && f.cliente).slice(0, 6); if (falas.length < 3) throw new Error('A IA não montou a conversa. Tente de novo.');
+        const d = { titulo: String(j.titulo || 'Simulação de atendimento').slice(0, 120), finalidade: 'candidato', simulacao: true, notaMin: 60, tempoMin: 0,
+          instrucoes: `${String(j.cenario || '').slice(0, 400)} Responda cada fala como se estivesse falando com o cliente na loja. Escreva do seu jeito, não existe resposta decorada.`.trim(),
+          perguntas: falas.map((f, i) => ({ id: uid(8), tipo: 'longa', texto: `Cliente: "${String(f.cliente).slice(0, 400)}"`, peso: 1 })), criadoEm: agora(), por: S.me.nome };
+        d.rubrica = Object.fromEntries(d.perguntas.map((p, i) => [p.id, (falas[i].bom || []).map(x => String(x).slice(0, 200)).slice(0, 5)]));
+        await sub(S.eid, 'quest').add(d); log(`Criou a simulação ${d.titulo}`); closeModal(); toast('Simulação criada. Envie pela ficha do candidato em "Enviar teste".');
+      } catch (e) { b.disabled = false; b.textContent = 'Criar com IA'; toast(e.message || 'A IA não respondeu. Tente de novo.', true); } } });
+}
+async function avaliarSimulacao(a, t) {
+  const q = questDe(t.questId); if (!q) throw new Error('Simulação não encontrada.');
+  const linhas = q.perguntas.map((p, i) => `Fala ${i + 1} (id ${p.id}): ${p.texto}\nResposta do candidato: ${String((t.respostas || {})[p.id] || '(sem resposta)').slice(0, 1200)}\nUma boa resposta deve: ${((q.rubrica || {})[p.id] || []).join('; ')}`).join('\n\n');
+  const pedido = `Avalie o atendimento deste candidato numa simulação de loja. Seja justo e objetivo: valorize educação, escuta, argumentos de valor (garantia, troca, condições), oferta de acessórios e fechamento. Não penalize português simples.
+Cenário: ${q.instrucoes || ''}
+
+${linhas}
+
+Responda em JSON: {"notas": {"<id>": {"nota": 0 a 10, "motivo": "uma frase"}}, "resumo": "duas frases sobre os pontos fortes e o que melhorar"}`;
+  const j = JSON.parse(String(await groq([{ role: 'system', content: 'Você avalia vendedores de loja para recrutamento. Responda só em JSON.' }, { role: 'user', content: pedido }])).replace(/^```json|```$/g, '').trim());
+  const notasIA = {}, novas = {};
+  q.perguntas.forEach(p => { const x = (j.notas || {})[p.id]; if (x && x.nota != null) { const n = Math.max(0, Math.min(10, Math.round(+x.nota))); notasIA[p.id] = { nota: n, motivo: String(x.motivo || '').slice(0, 240) }; novas[`${t.id}:${p.id}`] = n; } });
+  const pv = privDe(a.id), simIA = { ...(pv.simIA || {}), [t.id]: { notas: notasIA, resumo: String(j.resumo || '').slice(0, 500), em: agora(), por: S.me.nome } };
+  await sub(S.eid, 'priv').doc(a.id).set({ notas: { ...(pv.notas || {}), ...novas }, simIA }, { merge: true });
+  pv.notas = { ...(pv.notas || {}), ...novas }; pv.simIA = simIA; if (!S.d.priv.includes(pv)) S.d.priv.push(pv);
+  log(`A IA avaliou a simulação de atendimento de ${a.perfil.nome}`);
+}
+function painelSimulacao(a) {
+  const m = [...document.querySelectorAll('.modal')].pop(); if (!m || $('#sim-p', m)) return;
+  const ts = (a.testes || []).filter(t => t.respondidoEm && (questDe(t.questId) || {}).simulacao); if (!ts.length) return;
+  const pv = privDe(a.id), alvo = $('.modal-b .panel', m) || $('.modal-b', m); if (!alvo) return;
+  const html = ts.map(t => { const r = (pv.simIA || {})[t.id], q = questDe(t.questId), vs = r ? Object.values(r.notas).map(x => x.nota) : [], md = vs.length ? Math.round(vs.reduce((s, x) => s + x, 0) / vs.length * 10) / 10 : null;
+    return `<div class="sim-b"><div class="row" style="gap:8px;flex-wrap:wrap"><b style="flex:1">${esc(t.titulo)}</b>${r ? `<span class="pill ok">Nota da IA: ${String(md).replace('.', ',')}/10</span>` : `<button class="btn sm" data-sim="${t.id}">Avaliar o atendimento com IA</button>`}</div>
+      ${r ? `<p style="margin:6px 0">${esc(r.resumo)}</p>${q.perguntas.map((p, i) => `<details><summary>${i + 1}. ${esc(p.texto.slice(0, 90))}${(r.notas[p.id] || {}).nota != null ? ` · <b>${r.notas[p.id].nota}</b>` : ''}</summary><p class="hint" style="margin:4px 0">Resposta: ${esc(String((t.respostas || {})[p.id] || '—'))}</p><p class="hint" style="margin:0">${esc((r.notas[p.id] || {}).motivo || '')}</p></details>`).join('')}<p class="hint" style="margin:6px 0 0">As notas já entram no teste e no ranking. Você pode mudar qualquer nota abaixo.</p>` : '<p class="hint" style="margin:6px 0 0">A IA lê as respostas e dá uma nota de 0 a 10 para cada fala, com o motivo.</p>'}</div>`; }).join('');
+  alvo.insertAdjacentHTML('beforebegin', `<section class="panel" id="sim-p" style="padding:14px 16px"><h3 style="margin:0 0 8px">Simulação de atendimento</h3>${html}</section>`);
+  $$('[data-sim]', m).forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = 'A IA está lendo…'; try { await avaliarSimulacao(a, a.testes.find(t => t.id === b.dataset.sim)); toast('Simulação avaliada.'); abrirCand(a.id, 'resp'); } catch (e) { b.disabled = false; b.textContent = 'Avaliar o atendimento com IA'; toast(e.message || 'A IA não respondeu.', true); } });
+}
+if (typeof abrirCand === 'function') { const _acSim = abrirCand; abrirCand = function (id, aba) { const r = _acSim.apply(this, arguments); try { if (aba === 'resp') { const a = appDe(id); if (a) painelSimulacao(a); } } catch (e) { console.warn(e); } return r; }; }
+if (typeof vQuest === 'function') { const _vqSim = vQuest; vQuest = function (el) { const r = _vqSim.apply(this, arguments); try { const n = $('#qs-n', el); if (n && !$('#qs-sim', el)) { n.insertAdjacentHTML('beforebegin', '<button class="btn sec" id="qs-sim">Simulação de vendas com IA</button>'); $('#qs-sim', el).onclick = criarSimulacao; } } catch (e) { console.warn(e); } return r; }; }
+
+(function () {
+  const st = document.createElement('style');
+  st.textContent = `.dv-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}.dv-c{border:1px solid var(--line);border-radius:12px;padding:12px;display:grid;gap:8px}.dv-c>div:first-child{display:grid;gap:2px}.dv-c span{font-size:13px;color:var(--mut)}.dv-c .pill{justify-self:start}
+  .bt-av{border-color:#C9D6F2;background:#F3F7FF}.sim-b{border-top:1px solid var(--line);padding:10px 0}.sim-b:first-of-type{border-top:0;padding-top:0}.sim-b details{margin:4px 0}.sim-b summary{cursor:pointer;font-size:14px}`;
+  document.head.appendChild(st);
+})();
+</script>
+</body></html>
