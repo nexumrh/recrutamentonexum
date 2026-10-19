@@ -2606,6 +2606,20 @@ if (typeof vQuest === 'function') { const _vqSim = vQuest; vQuest = function (el
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <script>
 /* =====================================================================
    LOTE 28 (Recrutador): menu Treinamento com as videoaulas só do
@@ -2777,4 +2791,239 @@ function blocoFicha(a) {
 (function () { const st = document.createElement('style'); st.textContent = '.vp-box{border-left:4px solid var(--warn,#d97706)}'; document.head.appendChild(st); })();
 </script>
 
+<script>
+/* =====================================================================
+   LOTE 33 (Recrutador): finalistas lado a lado. Na comparação da vaga,
+   marque de 2 a 4 candidatos e veja um cartão de cada um, lado a lado,
+   com tudo o que importa para decidir, e aprove ou recuse ali mesmo.
+   ===================================================================== */
+function cartaoFinalista(a) {
+  const cego = typeof ocultar === 'function' && ocultar(a), n = notas(a), pv = privDe(a.id), te = n.testes.filter(t => t.pct != null), tm = te.length ? Math.round(te.reduce((s, t) => s + t.pct, 0) / te.length) : null, p = a.perfil || {}, g = pv.gerente, ia = pv.ia;
+  const ents = Object.values(pv.entrevistas || {}), rec = ents.map(x => x.recomendacao), recT = rec.includes('reprovar') ? ['bad', 'Reprovar'] : rec.includes('duvida') ? ['warn', 'Em dúvida'] : rec.includes('aprovar') ? ['ok', 'Aprovar'] : null;
+  const partes = [n.tri && n.tri.pct, tm, n.ent != null ? n.ent * 20 : null, ia ? ia.aderencia * 10 : null].filter(x => x != null), geral = partes.length ? Math.round(partes.reduce((s, x) => s + x, 0) / partes.length) : null;
+  const dias = diffD(new Date(a.criadoEm), new Date()), lin = (k, v) => `<div class="fz-l"><span>${k}</span><b>${v}</b></div>`;
+  return { geral, html: `<article class="fz-c" data-fz="${a.id}"><header><span class="av" style="--h:${hueNome(nomeVis(a))}" aria-hidden="true">${esc(iniciaisN(nomeVis(a)))}</span><div><b>${esc(nomeVis(a))}</b><small>${esc(cego ? '' : p.cidade || '')}${a.indicacao ? ' · indicado(a)' : ''}</small></div></header>
+    <div class="fz-g"><b>${geral != null ? geral : '—'}</b><span>índice geral</span></div>
+    ${lin('Etapa', ETAPA[etapaV(a)])}${lin('Triagem', n.tri && n.tri.pct != null ? n.tri.pct + '%' : '—')}${lin('Testes', tm != null ? tm + '%' : '—')}${lin('Entrevista', n.ent != null ? String(n.ent).replace('.', ',') + ' de 5' : '—')}${lin('IA', ia ? ia.aderencia + ' de 10' : '—')}${lin('No processo há', dias + ' dia' + (dias === 1 ? '' : 's'))}
+    ${recT ? `<div class="fz-l"><span>Entrevistadores</span><span class="pill ${recT[0]}">${recT[1]}</span></div>` : ''}${g ? `<div class="fz-l"><span>Gerente</span><span class="pill ${VOTO_G[g.voto][0]}">${VOTO_G[g.voto][1]}</span></div>` : ''}
+    ${n.tri && n.tri.elim ? '<p class="pill bad" style="white-space:normal">Não atende uma pergunta eliminatória</p>' : ''}
+    ${ia && (ia.fortes || []).length ? `<div class="fz-t"><span>Pontos fortes</span><ul>${ia.fortes.slice(0, 3).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    ${ia && (ia.lacunas || []).length ? `<div class="fz-t"><span>Atenção</span><ul>${ia.lacunas.slice(0, 2).map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
+    ${p.resumo && !cego ? `<div class="fz-t"><span>Resumo</span><p>${esc(String(p.resumo).slice(0, 220))}${String(p.resumo).length > 220 ? '…' : ''}</p></div>` : ''}
+    <footer>${ehEditor() && !final(a) ? `<button class="btn ok sm" data-fza="${a.id}">Aprovar</button><button class="btn sec sm" data-fzr="${a.id}">Não aprovar</button>` : ''}<button class="btn ghost sm" data-fzv="${a.id}">Ver ficha</button></footer></article>` };
+}
+function ladoALado(ids, vid) {
+  const l = ids.map(id => S.d.apps.find(a => a.id === id)).filter(Boolean).map(a => ({ a, ...cartaoFinalista(a) })), melhor = Math.max(...l.map(x => x.geral ?? -1));
+  modal(`Finalistas lado a lado: ${vagaDe(vid).titulo || ''}`, `<div class="fz" style="--n:${l.length}">${l.map(x => x.html.replace('class="fz-c"', `class="fz-c${x.geral === melhor && melhor >= 0 ? ' fz-top' : ''}"`)).join('')}</div><p class="note">O destaque é o maior índice geral, um apoio para comparar. A decisão é sua: ao aprovar, o candidato recebe o aviso no portal, por e-mail e pelo WhatsApp.</p>`,
+    { size: 'lg', onMount: m => {
+      $$('[data-fzv]', m).forEach(b => b.onclick = () => abrirCand(b.dataset.fzv));
+      $$('[data-fza]', m).forEach(b => b.onclick = () => decidir(S.d.apps.find(a => a.id === b.dataset.fza), 'aprovado'));
+      $$('[data-fzr]', m).forEach(b => b.onclick = () => decidir(S.d.apps.find(a => a.id === b.dataset.fzr), 'reprovado'));
+    } });
+}
+{ const _cf33 = compararFinalistas; compararFinalistas = function (vid) { const r = _cf33.apply(this, arguments); try {
+  const m = document.querySelector('#modal-root .modal'); if (!m) return r; const rows = [...m.querySelectorAll('tbody tr')], head = m.querySelector('thead tr'); if (!rows.length || !head) return r;
+  head.insertAdjacentHTML('afterbegin', '<th><span class="sr">Comparar</span></th>');
+  rows.forEach((tr, k) => { const id = (tr.querySelector('[data-ab]') || {}).dataset ? tr.querySelector('[data-ab]').dataset.ab : ''; tr.insertAdjacentHTML('afterbegin', `<td><input type="checkbox" data-fzk="${id}" ${k < 3 ? 'checked' : ''} aria-label="Comparar este candidato"></td>`); });
+  const b = document.createElement('div'); b.className = 'row'; b.style.cssText = 'gap:8px;margin:10px 0 0;align-items:center;flex-wrap:wrap';
+  b.innerHTML = '<button class="btn" id="fz-ok">Ver lado a lado</button><span class="hint" id="fz-n"></span>'; m.querySelector('.modal-b').prepend(b);
+  const conta = () => { const n = $$('[data-fzk]:checked', m).length; $('#fz-n', m).textContent = n < 2 ? 'Marque pelo menos 2 candidatos.' : n > 4 ? 'Marque no máximo 4.' : `${n} marcados para comparar.`; $('#fz-ok', m).disabled = n < 2 || n > 4; };
+  m.addEventListener('change', conta); conta(); $('#fz-ok', m).onclick = () => ladoALado($$('[data-fzk]:checked', m).map(x => x.dataset.fzk), vid);
+} catch (e) { console.warn(e); } return r; }; }
+(function () { const st = document.createElement('style'); st.textContent = `.fz{display:grid;grid-template-columns:repeat(var(--n),minmax(200px,1fr));gap:12px;overflow-x:auto}
+  .fz-c{border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:200px}.fz-c.fz-top{border-color:var(--ok,#16a34a);box-shadow:0 0 0 2px rgba(22,163,74,.18)}
+  .fz-c header{display:flex;gap:10px;align-items:center}.fz-c header div{display:grid}.fz-c header small{color:var(--mut);font-size:12px}
+  .fz-g{display:flex;gap:6px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line)}.fz-g b{font-size:26px}.fz-g span{font-size:12px;color:var(--mut)}
+  .fz-l{display:flex;justify-content:space-between;gap:8px;font-size:13px}.fz-l span{color:var(--mut)}.fz-t span{font-size:12px;color:var(--mut)}.fz-t ul{margin:2px 0 0;padding-left:16px;font-size:13px}.fz-t p{margin:2px 0 0;font-size:13px}
+  .fz-c footer{margin-top:auto;display:flex;gap:6px;flex-wrap:wrap;padding-top:6px}.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  @media (max-width:760px){.fz{grid-template-columns:1fr}}`; document.head.appendChild(st); })();
+
+</script>
+<script>
+/* =====================================================================
+   LOTE 34 (Recrutador): questionário comportamental. Sai sozinho quando
+   o candidato passa para a etapa escolhida (portal, e-mail e WhatsApp),
+   o candidato responde no portal e a IA diz se compensa contratar.
+   ===================================================================== */
+const cpCfg = () => ({ auto: true, etapa: 'triagem', prazoDias: 3, ...((S.emp && S.emp.comport) || {}) });
+const cpLink = a => { const u = new URL('rs_candidato.html', location.href); u.search = ''; u.hash = ''; u.searchParams.set('e', S.eid); u.searchParams.set('cp', a.id); return u.href; };
+function cpConvite(a, prazo) { const v = vagaDe(a.vagaId); return `Para continuar no processo da vaga de ${v.titulo || a.vagaTitulo || 'vaga'}, responda o questionário comportamental. São perguntas rápidas sobre situações do dia a dia de trabalho, cerca de 10 minutos, até ${fd(prazo)}. Não existe resposta certa ou errada.\n\nResponda aqui: ${cpLink(a)}`; }
+function cpDados(a) { const prazo = iso(addD(new Date(), Math.max(1, +cpCfg().prazoDias || 3))); return { comport: { enviadoEm: agora(), prazo, por: (S.me && S.me.nome) || 'RH' }, prazo }; }
+/* envio automático: quando o candidato vai para a etapa escolhida, o convite entra junto com a mensagem da etapa */
+(function () {
+  const P_ = Object.getPrototypeOf(db.doc('empresas/_')), orig = P_.update;
+  P_.update = function (dados) {
+    let d = dados;
+    try {
+      const m = /^empresas\/([^/]+)\/apps\/([^/]+)$/.exec(this.path || ''), c = cpCfg();
+      if (m && c.auto && dados && typeof dados === 'object' && !Array.isArray(dados) && dados.etapa === c.etapa && !('comport' in dados)) {
+        const a = (S.d.apps || []).find(x => x.id === m[2]);
+        if (a && !a.comport && !a.anonimizado && (a.etapa || '') !== dados.etapa) {
+          const { comport, prazo } = cpDados(a), conv = cpConvite(a, prazo), msgs = Array.isArray(dados.mensagens) ? dados.mensagens.slice() : (a.mensagens || []).slice(), novo = Array.isArray(dados.mensagens) && dados.mensagens.length > (a.mensagens || []).length;
+          let base = ''; if (!novo && typeof AVISO_ETAPA_PADRAO !== 'undefined' && AVISO_ETAPA_PADRAO[dados.etapa] && avisoEtapaCfg().ativo !== false) base = textoAvisoEtapa(a, dados.etapa);
+          if (novo) { const u = msgs[msgs.length - 1]; msgs[msgs.length - 1] = { ...u, t: `${u.t}\n\n${conv}` }; } else msgs.push({ de: 'rh', t: base ? `${base}\n\n${conv}` : `Olá, ${primeiro(a.perfil.nome)}! ${conv}`, por: (S.me && S.me.nome) || 'RH', em: agora(), auto: true });
+          d = { ...dados, comport, mensagens: msgs }; log(`Enviou o questionário comportamental para ${a.perfil.nome}`);
+        }
+      }
+    } catch (e) { console.warn('[comportamental]', e); }
+    return d === dados ? orig.apply(this, arguments) : orig.call(this, d);
+  };
+})();
+async function cpEnviarManual(a) {
+  const { comport, prazo } = cpDados(a);
+  await sub(S.eid, 'apps').doc(a.id).update({ comport, mensagens: [...(a.mensagens || []), { de: 'rh', t: `Olá, ${primeiro(a.perfil.nome)}! ${cpConvite(a, prazo)}`, por: S.me.nome, em: agora() }], atualizadoEm: agora() });
+  log(`Enviou o questionário comportamental para ${a.perfil.nome}`); toast('Questionário enviado pelo portal, e-mail e WhatsApp.');
+}
+async function cpAnalisar(a, forcar) {
+  const pv = privDe(a.id); if (pv.comport && pv.comport.ia && !forcar && pv.comport.de === a.comport.respondidoEm) return pv.comport;
+  const p = cpPontuar(a.comport.respostas), v = vagaDe(a.vagaId); let ia = null;
+  try { ia = cpLerIA(await groq(cpPromptIA(p, a.comport.respostas || {}, v.titulo || a.vagaTitulo, v.descricao, 'cand'))); } catch (e) { console.warn(e); }
+  const d = { p, ia, de: a.comport.respondidoEm }; await sub(S.eid, 'priv').doc(a.id).set({ comport: JSON.parse(JSON.stringify(d)) }, { merge: true }).catch(() => { }); pv.comport = d; return d;
+}
+function cpBlocoFicha(a, alvo) {
+  const box = document.createElement('section'); box.className = 'panel'; box.id = 'cp-fi'; box.style.cssText = 'padding:12px 14px;margin:0 0 12px';
+  const c = a.comport; alvo.prepend(box);
+  if (!c) { box.innerHTML = `<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><div><b>Questionário comportamental</b><div class="hint">Ainda não enviado. ${cpCfg().auto ? `Sai sozinho quando o candidato vai para ${ETAPA[cpCfg().etapa] || cpCfg().etapa}.` : ''}</div></div>${ehEditor() ? '<button class="btn sm" id="cp-env">Enviar agora</button>' : ''}</div>`;
+    const b = $('#cp-env', box); if (b) b.onclick = async () => { b.disabled = true; try { await cpEnviarManual(a); box.querySelector('.hint').textContent = 'Enviado agora. Aguardando a resposta.'; b.remove(); } catch (e) { b.disabled = false; toast(msgErro(e), true); } }; return; }
+  if (!c.respondidoEm) { box.innerHTML = `<b>Questionário comportamental</b><div class="hint">Enviado em ${fdt(c.enviadoEm)}${c.prazo ? `, prazo até ${fd(c.prazo)}` : ''}. Aguardando a resposta do candidato.</div>${ehEditor() ? '<div class="row" style="gap:8px;margin-top:8px"><button class="btn sec sm" id="cp-re">Lembrar o candidato</button></div>' : ''}`;
+    const re = $('#cp-re', box); if (re) re.onclick = async () => { re.disabled = true; try { await sub(S.eid, 'apps').doc(a.id).update({ mensagens: [...(a.mensagens || []), { de: 'rh', t: `Olá, ${primeiro(a.perfil.nome)}! Lembrete: falta responder o questionário comportamental. Leva uns 10 minutos: ${cpLink(a)}`, por: S.me.nome, em: agora() }] }); toast('Lembrete enviado.'); } catch (e) { re.disabled = false; toast(msgErro(e), true); } }; return; }
+  box.innerHTML = '<b>Questionário comportamental</b><p class="hint" style="margin:6px 0 0">Analisando as respostas…</p>';
+  cpAnalisar(a).then(d => { if (!box.isConnected) return; box.innerHTML = `<div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:8px"><b>Questionário comportamental</b><span class="hint">Respondido em ${fdt(a.comport.respondidoEm)}</span></div>${cpResultadoHTML(d.p, d.ia, 'cand')}${d.ia ? '' : '<p class="hint">Configure a inteligência artificial em Configurações para receber a recomendação. As notas acima já estão calculadas.</p>'}<details style="margin-top:8px"><summary style="cursor:pointer">Ver as respostas abertas</summary>${CP_ABERTAS.map((t, i) => `<p style="margin:8px 0 2px"><b>${esc(t)}</b></p><p style="margin:0;white-space:pre-wrap">${esc((a.comport.respostas || {})['a' + i] || '—')}</p>`).join('')}</details>`; })
+    .catch(e => { box.innerHTML = `<b>Questionário comportamental</b><p class="hint">Não foi possível analisar agora: ${esc(e.message)}</p>`; });
+}
+{ const _ac34 = abrirCand; abrirCand = function (id, aba) { const r = _ac34.apply(this, arguments); try { const a = S.d.apps.find(x => x.id === id); if (a && (!aba || aba === 'resumo')) setTimeout(() => { const b = document.querySelector('#modal-root .modal-b'); if (b && !$('#cp-fi', b)) cpBlocoFicha(a, b); }, 60); } catch (e) { } return r; }; }
+/* chip no cartão do quadro */
+{ const _cc34 = cardCand; cardCand = function (a) { let h = _cc34.apply(this, arguments); try { if (a.comport) { const pv = privDe(a.id), ia = pv.comport && pv.comport.ia, t = !a.comport.respondidoEm ? 'Comportamental: aguardando' : ia ? `Comportamental: ${CP_REC[ia.recomendacao][1]}` : 'Comportamental: respondido', cls = !a.comport.respondidoEm ? '' : ia ? CP_REC[ia.recomendacao][0] : 'pri';
+  h = h.replace(/<\/(article|div|button)>\s*$/, m => `<span class="pill ${cls}" style="margin-top:4px">${t}</span>${m}`); } } catch (e) { } return h; }; }
+/* configurações > Mensagens padrão */
+{ const _vc34 = vConfig; vConfig = function (el, aba) { _vc34.apply(this, arguments); try {
+  if ((aba || S.cfgAba) !== 'msg' || !ehAdmin()) return; const w = $('#cf-b', el); if (!w || $('#cpc-p', w)) return; const c = cpCfg();
+  const s = document.createElement('section'); s.className = 'panel'; s.id = 'cpc-p';
+  s.innerHTML = `<h2 style="margin-bottom:4px">Questionário comportamental</h2><p class="hint" style="margin-top:0">${cpPerguntas().length} perguntas sobre situações de trabalho (atendimento, equipe, responsabilidade, ética, calma sob pressão, aprendizado, organização e foco em resultado). A IA analisa e diz se compensa seguir com a contratação. Não é teste psicológico: é apoio à decisão, junto com a entrevista.</p>
+    <label class="row" style="gap:8px"><input type="checkbox" id="cpc-a" ${c.auto ? 'checked' : ''}> Enviar sozinho quando o candidato for para</label>
+    <div class="row" style="gap:8px;margin:8px 0 10px;flex-wrap:wrap"><select class="inp" id="cpc-e" style="width:auto" aria-label="Etapa">${opts(ETAPAS.filter(([k]) => ['triagem', 'teste', 'entrevista'].includes(k)), c.etapa)}</select><label class="row hint" style="gap:6px">Prazo para responder <input class="inp" id="cpc-p2" type="number" min="1" max="15" value="${c.prazoDias}" style="width:70px"> dias</label></div>
+    <div class="row end"><button class="btn sec" id="cpc-ver">Ver as perguntas</button><button class="btn" id="cpc-ok">Salvar</button></div>`;
+  const ae = $('#ac-p', w) || $('#ae-p', w); if (ae) ae.before(s); else w.appendChild(s);
+  $('#cpc-ver', s).onclick = () => modal('Perguntas do questionário comportamental', `<ol style="padding-left:20px;line-height:1.5">${cpPerguntas().map(q => `<li style="margin:6px 0">${esc(q.t)}${q.tipo === 'sit' ? `<ul class="hint" style="margin:2px 0 0;padding-left:16px">${q.op.map(o => `<li>${esc(o)}</li>`).join('')}</ul>` : q.tipo === 'lik' ? ' <span class="hint">(de 1 a 5)</span>' : ' <span class="hint">(resposta escrita)</span>'}</li>`).join('')}</ol>`, { size: 'lg' });
+  $('#cpc-ok', s).onclick = async () => { const v = { auto: $('#cpc-a', s).checked, etapa: $('#cpc-e', s).value, prazoDias: Math.max(1, Math.min(15, +$('#cpc-p2', s).value || 3)) }; try { await emp(S.eid).update({ comport: v }); S.emp.comport = v; log('Alterou o envio do questionário comportamental'); toast('Salvo.'); } catch (e) { toast(msgErro(e), true); } };
+} catch (e) { console.warn(e); } }; }
+/* finalistas lado a lado: linha do comportamental */
+if (typeof cartaoFinalista === 'function') { const _cf34 = cartaoFinalista; cartaoFinalista = function (a) { const r = _cf34.apply(this, arguments); try { const ia = (privDe(a.id).comport || {}).ia; const t = !a.comport ? '—' : !a.comport.respondidoEm ? 'aguardando' : ia ? `<span class="pill ${CP_REC[ia.recomendacao][0]}">${CP_REC[ia.recomendacao][1]}</span>` : 'respondido';
+  r.html = r.html.replace('<div class="fz-l"><span>No processo há</span>', `<div class="fz-l"><span>Comportamental</span><b>${t}</b></div><div class="fz-l"><span>No processo há</span>`); } catch (e) { } return r; }; }
+
+/* ---------- Questionário comportamental NEXUM: situações de trabalho e hábitos ----------
+   Não é teste psicológico (esses só podem ser aplicados por psicólogos): mede comportamentos de
+   trabalho ligados à função. A análise é apoio à decisão, junto com a entrevista. */
+const CP_COMP = { atend: 'Atendimento ao cliente', equipe: 'Trabalho em equipe', resp: 'Responsabilidade e pontualidade', etica: 'Ética e honestidade', emoc: 'Calma sob pressão', aprend: 'Vontade de aprender', org: 'Organização e atenção', result: 'Foco em resultado' };
+/* situações: cada opção soma pontos (0 a 3) em uma ou mais competências */
+const CP_SIT = [
+  ['Um cliente chega irritado, falando alto, porque o produto que comprou deu defeito.', [['Peço calma, escuto tudo sem interromper e explico o que dá para fazer agora.', { atend: 3, emoc: 3 }], ['Digo que não fui eu quem vendeu e chamo outra pessoa.', { atend: 0, equipe: 1 }], ['Explico a política de troca de forma firme para ele entender que não adianta gritar.', { atend: 1, emoc: 1 }], ['Chamo o gerente na hora, sem conversar.', { atend: 1, emoc: 2 }]]],
+  ['Faltam 10 minutos para fechar a loja e chega um cliente querendo ver vários produtos.', [['Atendo com a mesma atenção e aviso com educação o horário de fechamento.', { atend: 3, result: 2 }], ['Digo que a loja já está fechando e peço para ele voltar amanhã.', { atend: 0 }], ['Atendo rápido, mostrando só o básico.', { atend: 1, result: 1 }], ['Peço para um colega atender porque já arrumei meu setor.', { atend: 1, equipe: 0 }]]],
+  ['No fechamento, o seu caixa tem 50 reais a mais do que o sistema mostra.', [['Aviso o responsável e registro a diferença.', { etica: 3, org: 3 }], ['Guardo para cobrir alguma falta que aparecer depois.', { etica: 0, org: 1 }], ['Não falo nada, porque sobrou e não faltou.', { etica: 0 }], ['Confiro de novo as vendas do dia antes de qualquer coisa.', { etica: 2, org: 3 }]]],
+  ['Um colega pede para você bater o ponto dele porque vai chegar 15 minutos atrasado.', [['Não bato e sugiro que ele avise o gerente.', { etica: 3, equipe: 2 }], ['Bato, porque amanhã pode ser eu precisando.', { etica: 0, equipe: 1 }], ['Bato só desta vez.', { etica: 0 }], ['Finjo que não vi a mensagem.', { etica: 1, equipe: 0 }]]],
+  ['Você percebe que errou o preço de um produto numa venda que já foi concluída.', [['Aviso o gerente na hora e ajudo a resolver com o cliente.', { etica: 3, resp: 3 }], ['Espero alguém perceber.', { etica: 0, resp: 0 }], ['Corrijo sozinho no sistema sem contar para ninguém.', { etica: 1, resp: 1 }], ['Anoto para lembrar e conto no fim do mês.', { etica: 1, resp: 1, org: 1 }]]],
+  ['A meta do mês está difícil e falta uma semana.', [['Faço um plano: retomo contatos de clientes e ofereço produtos complementares.', { result: 3, org: 2 }], ['Faço o meu trabalho normal; meta é responsabilidade do gerente.', { result: 0 }], ['Pressiono os clientes até eles comprarem.', { result: 1, atend: 0, etica: 1 }], ['Peço ajuda aos colegas que estão vendendo mais para aprender com eles.', { result: 2, aprend: 3, equipe: 2 }]]],
+  ['O gerente pede para você aprender a usar um sistema novo, que parece complicado.', [['Peço para alguém me mostrar e treino até pegar o jeito.', { aprend: 3, equipe: 1 }], ['Digo que prefiro continuar do jeito antigo.', { aprend: 0 }], ['Uso só quando não tem jeito.', { aprend: 1 }], ['Procuro um vídeo ou tutorial sozinho, fora do horário se precisar.', { aprend: 3, resp: 1 }]]],
+  ['Dois colegas estão discutindo na frente dos clientes.', [['Peço com calma que continuem a conversa nos fundos e sigo atendendo.', { equipe: 3, emoc: 3, atend: 2 }], ['Não me meto, não é problema meu.', { equipe: 0 }], ['Tomo partido de quem está certo.', { equipe: 1, emoc: 1 }], ['Aviso o gerente depois do atendimento.', { equipe: 2, resp: 1 }]]],
+  ['Você vai faltar amanhã por um compromisso que surgiu.', [['Aviso o gerente hoje, com antecedência, e combino como fica.', { resp: 3, equipe: 2 }], ['Aviso amanhã de manhã.', { resp: 1 }], ['Não aviso e explico depois.', { resp: 0, equipe: 0 }], ['Peço a um colega para avisar por mim.', { resp: 1 }]]],
+  ['O estoque está bagunçado e ninguém pediu para você arrumar.', [['Arrumo quando tenho um tempo livre e aviso o que encontrei.', { org: 3, resp: 2, equipe: 2 }], ['Deixo como está, não é minha função.', { org: 0 }], ['Comento com os colegas que está bagunçado.', { org: 1, equipe: 1 }], ['Arrumo só a parte que eu uso.', { org: 2 }]]],
+  ['Um cliente pede um desconto que você não pode dar.', [['Explico que não posso, mostro outras vantagens e, se for o caso, consulto o gerente.', { atend: 3, result: 2, etica: 2 }], ['Dou o desconto para não perder a venda.', { etica: 0, result: 1 }], ['Digo apenas que não pode.', { atend: 1 }], ['Prometo um desconto na próxima compra sem confirmar.', { etica: 0, atend: 1 }]]],
+  ['Seu gerente chama a sua atenção por um erro, na frente de outras pessoas.', [['Escuto, depois converso em particular e corrijo o erro.', { emoc: 3, aprend: 2 }], ['Respondo na hora que ele está errado.', { emoc: 0 }], ['Fico chateado e passo o dia sem falar com ninguém.', { emoc: 1, equipe: 1 }], ['Peço desculpas e não toco mais no assunto.', { emoc: 2 }]]],
+  ['Um cliente esqueceu o celular no balcão e foi embora.', [['Guardo em lugar seguro, aviso o responsável e tento contato.', { etica: 3, atend: 3, org: 2 }], ['Deixo no balcão; se ele voltar, está lá.', { etica: 1, org: 0 }], ['Levo para casa para não sumir.', { etica: 0 }], ['Entrego ao segurança do shopping.', { etica: 2, atend: 1 }]]],
+  ['A loja está cheia e um colega novo não sabe fazer uma troca.', [['Ajudo rapidamente e depois explico com calma como funciona.', { equipe: 3, atend: 2 }], ['Mando ele perguntar ao gerente.', { equipe: 1 }], ['Faço por ele sem explicar, para ir mais rápido.', { equipe: 1, result: 1 }], ['Deixo ele se virar, assim aprende.', { equipe: 0 }]]],
+  ['Você recebe uma tarefa com prazo, mas tem dúvida de como fazer.', [['Pergunto logo no começo para não errar.', { resp: 3, aprend: 2, org: 2 }], ['Faço do meu jeito e vejo no que dá.', { resp: 1 }], ['Espero alguém perceber que não fiz.', { resp: 0 }], ['Pesquiso sozinho e pergunto só se travar.', { aprend: 2, resp: 2 }]]],
+  ['Um cliente elogia você para o gerente.', [['Agradeço e conto que o time todo ajudou no atendimento.', { equipe: 3, atend: 2 }], ['Agradeço e peço um aumento.', { equipe: 0, result: 1 }], ['Agradeço.', { atend: 2 }], ['Fico sem graça e mudo de assunto.', { atend: 1 }]]]
+];
+/* afirmações: concordo de 1 a 5. "i" = invertida (concordar tira ponto) */
+const CP_LIK = [
+  ['Gosto de conversar com pessoas que não conheço.', 'atend'], ['Fico impaciente quando o cliente demora para decidir.', 'atend', 1], ['Faço o possível para o cliente sair satisfeito, mesmo quando dá trabalho.', 'atend'],
+  ['Prefiro trabalhar sozinho a dividir tarefas.', 'equipe', 1], ['Ajudo colegas mesmo quando não é minha obrigação.', 'equipe'], ['Me dou bem com pessoas de jeitos diferentes do meu.', 'equipe'],
+  ['Costumo chegar antes do horário.', 'resp'], ['Às vezes esqueço compromissos de trabalho.', 'resp', 1], ['Quando prometo algo, cumpro.', 'resp'],
+  ['Regras existem para ser seguidas, mesmo quando ninguém está olhando.', 'etica'], ['Um pequeno desvio não faz mal se ninguém sai prejudicado.', 'etica', 1], ['Conto quando erro, mesmo que ninguém tenha percebido.', 'etica'],
+  ['Em dias de muito movimento, consigo manter a calma.', 'emoc'], ['Críticas me deixam abalado por muito tempo.', 'emoc', 1], ['Consigo resolver problemas mesmo sob pressão.', 'emoc'],
+  ['Gosto de aprender coisas novas no trabalho.', 'aprend'], ['Prefiro fazer sempre do mesmo jeito.', 'aprend', 1], ['Peço retorno sobre como posso melhorar.', 'aprend'],
+  ['Mantenho meu espaço de trabalho arrumado.', 'org'], ['Confiro o que faço antes de entregar.', 'org'], ['Perco coisas com frequência.', 'org', 1],
+  ['Metas me motivam a trabalhar melhor.', 'result'], ['Faço só o necessário.', 'result', 1], ['Procuro jeitos de vender mais ou fazer melhor.', 'result']
+];
+/* pares parecidos para medir coerência, e frases idealizadas (quase ninguém concorda totalmente) */
+const CP_CHECK = [['Chego no horário combinado.', 'resp', 6], ['Ajudo quem está com dificuldade, mesmo sem ser pedido.', 'equipe', 4], ['Nunca fiquei irritado com ninguém no trabalho.', 'ideal'], ['Nunca cometi nenhum erro em um emprego.', 'ideal']];
+const CP_ABERTAS = ['Conte uma situação difícil que você viveu com um cliente ou colega e o que fez.', 'Por que você quer (ou gosta de) trabalhar nesta função?'];
+function cpPerguntas() {
+  const l = []; CP_SIT.forEach((s, i) => l.push({ id: 's' + i, tipo: 'sit', t: s[0], op: s[1].map(o => o[0]) }));
+  CP_LIK.forEach((x, i) => l.push({ id: 'l' + i, tipo: 'lik', t: x[0] })); CP_CHECK.forEach((x, i) => l.push({ id: 'c' + i, tipo: 'lik', t: x[0] }));
+  CP_ABERTAS.forEach((t, i) => l.push({ id: 'a' + i, tipo: 'aberta', t }));
+  /* mistura as afirmações entre as situações de forma fixa, para todos verem na mesma ordem */
+  const sit = l.filter(x => x.tipo === 'sit'), lik = l.filter(x => x.tipo === 'lik'), ab = l.filter(x => x.tipo === 'aberta'), out = [];
+  for (let i = 0; i < sit.length; i++) { out.push(sit[i]); out.push(...lik.splice(0, 2)); } out.push(...lik, ...ab); return out;
+}
+function cpPontuar(resp) {
+  const r = resp || {}, soma = {}, max = {}; Object.keys(CP_COMP).forEach(k => { soma[k] = 0; max[k] = 0; });
+  CP_SIT.forEach((s, i) => { const esc = r['s' + i]; const comps = new Set(s[1].flatMap(o => Object.keys(o[1]))); comps.forEach(k => { max[k] += 3; }); if (esc != null && s[1][+esc]) Object.entries(s[1][+esc][1]).forEach(([k, v]) => { soma[k] += v; }); });
+  CP_LIK.forEach((x, i) => { const v = +r['l' + i]; max[x[1]] += 4; if (v >= 1 && v <= 5) soma[x[1]] += x[2] ? 5 - v : v - 1; });
+  const comp = {}; Object.keys(CP_COMP).forEach(k => comp[k] = max[k] ? Math.round(soma[k] / max[k] * 100) : 0);
+  const par = (a, b) => (+r[a] && +r[b]) ? Math.abs(+r[a] - +r[b]) : 0, incoer = par('c0', 'l6') + par('c1', 'l4');
+  const ideal = ['c2', 'c3'].filter(k => +r[k] === 5).length, respondidas = Object.keys(r).filter(k => r[k] !== '' && r[k] != null).length, total = cpPerguntas().length;
+  const geral = Math.round(Object.values(comp).reduce((t, v) => t + v, 0) / Object.keys(comp).length);
+  return { comp, geral, coerencia: incoer >= 5 ? 'baixa' : incoer >= 3 ? 'media' : 'boa', idealizado: ideal >= 2 ? 'alto' : ideal === 1 ? 'medio' : 'baixo', completo: respondidas >= total - 2, respondidas, total };
+}
+/* a IA lê as notas e as respostas abertas e diz se compensa contratar (ou como desenvolver quem já trabalha) */
+function cpPromptIA(p, resp, cargo, desc, modo) {
+  const comp = Object.entries(p.comp).map(([k, v]) => `${CP_COMP[k]}: ${v}`).join('; ');
+  return [{ role: 'system', content: `Você é um analista de RH de varejo no Brasil. Recebe o resultado de um questionário de comportamento no trabalho (não é teste psicológico) e escreve uma análise curta e justa para a empresa. ${modo === 'colab' ? 'A pessoa já trabalha na empresa: diga como ela se encaixa na função hoje e o que desenvolver. Em "recomendacao" use "destaque" (muito bem), "adequado" ou "desenvolver" (precisa de atenção).' : 'A pessoa é candidata: diga se compensa seguir com a contratação para esta vaga. Em "recomendacao" use "recomendado", "avaliar" (seguir com cuidado, conferir na entrevista) ou "nao_recomendado".'}
+Regras: use só o que está nos dados; nunca considere idade, gênero, raça, religião, gravidez, saúde, deficiência, origem ou vida pessoal; se a coerência for baixa ou as respostas parecerem idealizadas, diga que o resultado é menos confiável; nunca afirme diagnóstico ou traço de personalidade. Responda só com JSON: {"recomendacao":"","nota":0-100,"resumo":"2 ou 3 frases","fortes":["até 3"],"atencao":["até 3"],"perguntas":["2 ou 3 perguntas para checar na entrevista ou na conversa de feedback"]}` },
+    { role: 'user', content: `Cargo: ${cargo || 'não informado'}\n${desc ? 'Descrição da vaga: ' + String(desc).slice(0, 600) + '\n' : ''}Notas de 0 a 100 por competência: ${comp}\nNota geral: ${p.geral}\nCoerência das respostas: ${p.coerencia}. Respostas idealizadas: ${p.idealizado}. Respondeu ${p.respondidas} de ${p.total}.\nResposta aberta 1 (${CP_ABERTAS[0]}): ${String(resp.a0 || '').slice(0, 800)}\nResposta aberta 2 (${CP_ABERTAS[1]}): ${String(resp.a1 || '').slice(0, 500)}` }];
+}
+const CP_REC = { recomendado: ['ok', 'Recomendado'], avaliar: ['warn', 'Avaliar com cuidado'], nao_recomendado: ['bad', 'Não recomendado'], destaque: ['ok', 'Destaque na função'], adequado: ['ok', 'Adequado à função'], desenvolver: ['warn', 'Precisa desenvolver'] };
+function cpLerIA(t) { const m = String(t || '').match(/\{[\s\S]*\}/); if (!m) throw new Error('A IA não respondeu no formato esperado.'); const j = JSON.parse(m[0]);
+  return { recomendacao: CP_REC[j.recomendacao] ? j.recomendacao : 'avaliar', nota: Math.max(0, Math.min(100, Math.round(+j.nota || 0))), resumo: String(j.resumo || '').slice(0, 600), fortes: (j.fortes || []).slice(0, 3).map(x => String(x).slice(0, 160)), atencao: (j.atencao || []).slice(0, 3).map(x => String(x).slice(0, 160)), perguntas: (j.perguntas || []).slice(0, 3).map(x => String(x).slice(0, 200)), em: new Date().toISOString() }; }
+function cpResultadoHTML(p, ia, modo) {
+  const esc2 = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]), r = ia && CP_REC[ia.recomendacao];
+  return `<div class="cp-res">${ia ? `<div class="cp-rec cp-${r[0]}"><b>${r[1]}</b><span>Nota da IA: ${ia.nota} de 100</span></div><p class="cp-rs">${esc2(ia.resumo)}</p>` : ''}
+    <div class="cp-bars">${Object.entries(p.comp).map(([k, v]) => `<div class="cp-bar"><span>${CP_COMP[k]}</span><i><b style="width:${v}%"></b></i><em>${v}</em></div>`).join('')}</div>
+    <p class="cp-conf">Coerência das respostas: <b>${{ boa: 'boa', media: 'média', baixa: 'baixa' }[p.coerencia]}</b>${p.idealizado !== 'baixo' ? ` · respostas ${p.idealizado === 'alto' ? 'muito ' : ''}idealizadas` : ''} · ${p.respondidas} de ${p.total} respondidas</p>
+    ${ia && ia.fortes.length ? `<div class="cp-l"><b>Pontos fortes</b><ul>${ia.fortes.map(x => `<li>${esc2(x)}</li>`).join('')}</ul></div>` : ''}${ia && ia.atencao.length ? `<div class="cp-l"><b>Pontos de atenção</b><ul>${ia.atencao.map(x => `<li>${esc2(x)}</li>`).join('')}</ul></div>` : ''}
+    ${ia && ia.perguntas.length ? `<div class="cp-l"><b>${modo === 'colab' ? 'Para conversar no feedback' : 'Para checar na entrevista'}</b><ul>${ia.perguntas.map(x => `<li>${esc2(x)}</li>`).join('')}</ul></div>` : ''}
+    <p class="cp-av">Apoio à decisão: não é teste psicológico e não substitui ${modo === 'colab' ? 'a conversa com a pessoa' : 'a entrevista'}. Não use como único motivo para ${modo === 'colab' ? 'desligar ou promover' : 'reprovar'} alguém.</p></div>`;
+}
+/* tela de resposta (candidato e funcionário): 6 perguntas por página, com barra de progresso e rascunho salvo no aparelho */
+function cpResponder({ titulo, intro, chave, salvar, aoFim }) {
+  const Q = cpPerguntas(), POR = 6, pags = Math.ceil(Q.length / POR); let pg = 0, r = {}; try { r = JSON.parse(localStorage.getItem(chave) || '{}'); } catch (e) { }
+  const ov = document.createElement('div'); ov.className = 'cp-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', titulo); document.body.appendChild(ov);
+  const esc2 = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const guardar = () => { try { localStorage.setItem(chave, JSON.stringify(r)); } catch (e) { } };
+  const pinta = () => {
+    const l = Q.slice(pg * POR, pg * POR + POR), feitos = Q.filter(q => r[q.id] != null && r[q.id] !== '').length;
+    ov.innerHTML = `<div class="cp-box"><header><b>${esc2(titulo)}</b><button type="button" class="cp-x" aria-label="Fechar e continuar depois">×</button></header><div class="cp-pr" aria-hidden="true"><i style="width:${Math.round(feitos / Q.length * 100)}%"></i></div><p class="cp-pi">Parte ${pg + 1} de ${pags} · ${feitos} de ${Q.length} respondidas</p>
+      ${pg === 0 ? `<p class="cp-in">${esc2(intro)}</p>` : ''}
+      ${l.map(q => `<fieldset class="cp-q" data-q="${q.id}"><legend>${esc2(q.t)}</legend>${q.tipo === 'sit' ? q.op.map((o, i) => `<label><input type="radio" name="${q.id}" value="${i}" ${String(r[q.id]) === String(i) ? 'checked' : ''}> ${esc2(o)}</label>`).join('')
+        : q.tipo === 'lik' ? `<div class="cp-lk">${[1, 2, 3, 4, 5].map(v => `<label><input type="radio" name="${q.id}" value="${v}" ${+r[q.id] === v ? 'checked' : ''}><span>${v}</span></label>`).join('')}</div><div class="cp-lkl"><span>Discordo totalmente</span><span>Concordo totalmente</span></div>`
+        : `<textarea name="${q.id}" rows="3" maxlength="900" placeholder="Escreva com suas palavras">${esc2(r[q.id] || '')}</textarea>`}</fieldset>`).join('')}
+      <footer>${pg ? '<button type="button" class="cp-b sec" data-cp="ant">Voltar</button>' : '<span></span>'}<button type="button" class="cp-b" data-cp="${pg + 1 < pags ? 'prox' : 'fim'}">${pg + 1 < pags ? 'Continuar' : 'Enviar respostas'}</button></footer></div>`;
+    ov.querySelectorAll('input,textarea').forEach(i => i.addEventListener(i.tagName === 'TEXTAREA' ? 'input' : 'change', () => { r[i.name] = i.tagName === 'TEXTAREA' ? i.value : i.value; guardar(); }));
+    ov.querySelector('.cp-x').onclick = () => ov.remove();
+    const b = ov.querySelector('[data-cp="ant"]'); if (b) b.onclick = () => { pg--; pinta(); ov.scrollTop = 0; };
+    ov.querySelector('[data-cp="prox"],[data-cp="fim"]').onclick = async ev => {
+      const falta = l.filter(q => q.tipo !== 'aberta' && (r[q.id] == null || r[q.id] === '')); if (falta.length) { const f = ov.querySelector(`[data-q="${falta[0].id}"]`); f.classList.add('cp-falta'); f.scrollIntoView({ block: 'center' }); return; }
+      if (ev.currentTarget.dataset.cp === 'prox') { pg++; pinta(); ov.scrollTop = 0; return; }
+      ev.currentTarget.disabled = true; ev.currentTarget.textContent = 'Enviando…';
+      try { await salvar(r); try { localStorage.removeItem(chave); } catch (e) { } ov.innerHTML = `<div class="cp-box cp-ok"><b>Respostas enviadas. Obrigado!</b><p>Não existe resposta certa ou errada: o objetivo é conhecer o seu jeito de trabalhar.</p><button type="button" class="cp-b">Fechar</button></div>`; ov.querySelector('.cp-b').onclick = () => { ov.remove(); if (aoFim) aoFim(); }; }
+      catch (e) { ev.currentTarget.disabled = false; ev.currentTarget.textContent = 'Enviar respostas'; alert('Não foi possível enviar agora. Confira a internet e tente de novo.'); }
+    };
+  };
+  pinta();
+}
+(function () { const st = document.createElement('style'); st.textContent = `
+  .cp-ov{position:fixed;inset:0;z-index:10050;background:rgba(6,16,46,.6);overflow:auto;padding:16px}.cp-box{max-width:640px;margin:0 auto;background:var(--card,#fff);color:var(--tx,var(--ink,#0b1530));border-radius:16px;padding:16px 18px;display:grid;gap:12px}
+  .cp-box header{display:flex;justify-content:space-between;align-items:center;gap:10px}.cp-box header b{font-size:18px}.cp-x{border:0;background:none;font-size:26px;cursor:pointer;color:inherit;line-height:1}
+  .cp-pr{height:8px;border-radius:99px;background:rgba(127,127,127,.2);overflow:hidden}.cp-pr i{display:block;height:100%;background:linear-gradient(90deg,#1f5eff,#f26a1b)}.cp-pi,.cp-in{margin:0;font-size:13px;opacity:.75}.cp-in{opacity:.9;font-size:14px}
+  .cp-q{border:1px solid rgba(127,127,127,.3);border-radius:12px;padding:10px 12px;margin:0;display:grid;gap:6px}.cp-q legend{font-weight:600;padding:0 4px;font-size:15px}.cp-q>label{display:flex;gap:8px;align-items:flex-start;cursor:pointer;font-size:14px;line-height:1.4}.cp-q.cp-falta{border-color:#c62d46;box-shadow:0 0 0 2px rgba(198,45,70,.2)}
+  .cp-lk{display:flex;gap:6px}.cp-lk label{flex:1;cursor:pointer}.cp-lk input{position:absolute;opacity:0}.cp-lk span{display:grid;place-items:center;height:40px;border-radius:10px;border:1px solid rgba(127,127,127,.35);font-weight:700}.cp-lk input:checked+span{background:#1f5eff;color:#fff;border-color:#1f5eff}.cp-lk input:focus-visible+span{outline:2px solid #1f5eff}
+  .cp-lkl{display:flex;justify-content:space-between;font-size:11px;opacity:.65}.cp-q textarea{width:100%;font:inherit;border:1px solid rgba(127,127,127,.35);border-radius:10px;padding:8px;background:transparent;color:inherit;box-sizing:border-box}
+  .cp-box footer{display:flex;justify-content:space-between;gap:8px}.cp-b{border:0;border-radius:10px;padding:11px 18px;background:#1f5eff;color:#fff;font:inherit;font-weight:700;cursor:pointer}.cp-b.sec{background:transparent;color:inherit;border:1px solid rgba(127,127,127,.4)}.cp-b:disabled{opacity:.5}
+  .cp-ok{text-align:center;padding:30px 18px}.cp-ok b{font-size:20px}
+  .cp-res{display:grid;gap:10px}.cp-rec{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:10px 12px;border-radius:12px}.cp-rec b{font-size:17px}.cp-rec span{font-size:13px;opacity:.8}.cp-ok.cp-rec,.cp-rec.cp-ok{background:rgba(22,163,74,.12);color:#15803d}.cp-rec.cp-warn{background:rgba(217,119,6,.13);color:#b45309}.cp-rec.cp-bad{background:rgba(198,45,70,.12);color:#b91c3c}
+  .cp-rs{margin:0;line-height:1.5}.cp-bars{display:grid;gap:5px}.cp-bar{display:grid;grid-template-columns:minmax(120px,190px) 1fr 34px;gap:8px;align-items:center;font-size:13px}.cp-bar i{height:8px;border-radius:99px;background:rgba(127,127,127,.2);overflow:hidden}.cp-bar i b{display:block;height:100%;background:#1f5eff}.cp-bar em{font-style:normal;text-align:right;font-weight:700}
+  .cp-conf,.cp-av{margin:0;font-size:12px;opacity:.75}.cp-l ul{margin:4px 0 0;padding-left:18px}.cp-l li{margin:2px 0;font-size:14px}`; document.head.appendChild(st); })();
+
+</script>
 </body></html>
