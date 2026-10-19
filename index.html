@@ -2580,4 +2580,40 @@ if (typeof vQuest === 'function') { const _vqSim = vQuest; vQuest = function (el
   document.head.appendChild(st);
 })();
 </script>
+<script>
+/* =====================================================================
+   LOTE 28 (Recrutador): menu Treinamento com as videoaulas só do
+   Recrutamento e Seleção. Abre a mesma página das aulas do NEXUM
+   (rh.nexumdp.com.br/aula.html) com o código desta pessoa, e o progresso
+   aparece para a NEXUM em Treinamento dos clientes.
+   ===================================================================== */
+const NX_AULAS = { url: 'https://rh.nexumdp.com.br/aula.html?t=', key: 'AIzaSyDdcLJdO2qnmiGsR1EsKFu-uJfs4FRNvA4', proj: 'nexum-30044' };
+try { if (!NAV.some(n => n[0] === 'trein')) { const i = NAV.findIndex(n => n[0] === 'relat'); NAV.splice(i > -1 ? i + 1 : NAV.length, 0, ['trein', 'Treinamento']); } } catch (e) { }
+try { ICONES.trein = ICO('<rect x="2" y="4" width="20" height="14" rx="2"/><path d="M10 8.5v6l5-3z"/><path d="M8 21h8"/>'); } catch (e) { }
+try { SUBT.trein = 'Aulas em vídeo, com voz, de cada tela do Recrutamento e Seleção'; } catch (e) { }
+async function rsAulaToken() {
+  const k = `nx-rs-aula:${S.emp && S.emp.id}:${S.me && S.me.id}`;
+  try { const t = localStorage.getItem(k); if (t) return t; } catch (e) { }
+  const a = new Uint8Array(18), c = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789'; crypto.getRandomValues(a); const tk = Array.from(a, x => c[x % c.length]).join('');
+  const S_ = v => ({ stringValue: String(v || '') }), agora = new Date().toISOString();
+  const corpo = { fields: { mod: S_('rs'), origem: S_('rs-app'), nome: { stringValue: String((S.me && S.me.nome) || 'Recrutador').slice(0, 80) }, empresa: { stringValue: String((S.emp && S.emp.nome) || '').slice(0, 120) },
+    tid: S_((S.rh && S.rh.tid) || ''), rsEmp: S_((S.emp && S.emp.id) || ''), criadoEm: S_(agora), ativo: { booleanValue: true }, feitas: { mapValue: { fields: {} } }, pos: { mapValue: { fields: {} } }, pct: { integerValue: '0' }, concluido: { booleanValue: false }, visitas: { integerValue: '0' } } };
+  const r = await fetch(`https://firestore.googleapis.com/v1/projects/${NX_AULAS.proj}/databases/(default)/documents/treinoLinks?documentId=${tk}&key=${NX_AULAS.key}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo) });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  try { localStorage.setItem(k, tk); } catch (e) { }
+  return tk;
+}
+async function vTreinRS(el) {
+  el.innerHTML = '<div class="panel"><p class="hint">Abrindo o treinamento…</p></div>';
+  let tk = ''; try { tk = await rsAulaToken(); } catch (e) { el.innerHTML = `<div class="panel empty"><b>Não foi possível abrir o treinamento agora.</b><p class="hint">Confira a internet e tente de novo. Se continuar, fale com o suporte da NEXUM.</p></div>`; return; }
+  if (S.view !== 'trein') return; const u = NX_AULAS.url + tk;
+  el.innerHTML = `<div class="row" style="margin-bottom:10px;align-items:center;gap:8px;flex-wrap:wrap"><p class="hint" style="margin:0;flex:1;min-width:240px">Aulas curtas, com voz, só do Recrutamento e Seleção. Elas seguem em ordem e não dá para adiantar. No fim tem um quiz e o certificado.</p><a class="btn sec sm" href="${u}" target="_blank" rel="noopener">Abrir em tela cheia</a></div>
+    <iframe src="${u}" title="Treinamento do Recrutamento e Seleção" allow="autoplay; fullscreen" allowfullscreen style="width:100%;height:calc(100vh - 190px);min-height:560px;border:1px solid var(--line,#e3e8f0);border-radius:14px;background:#fff"></iframe>`;
+}
+if (typeof render === 'function') { const _rndTr = render; render = function () {
+  if (S.view === 'trein') { const el = $('#view'); if (!el) return; $('#t-view').textContent = 'Treinamento'; const sb = $('#t-sub'); if (sb) sb.textContent = SUBT.trein || ''; vTreinRS(el); return; }
+  return _rndTr.apply(this, arguments); }; }
+setTimeout(() => { try { if (S.me && document.querySelector('.side .nav') && !document.querySelector('.side .nav button[data-v="trein"]') && typeof shell === 'function') shell(); } catch (e) { } }, 0);
+</script>
+
 </body></html>
