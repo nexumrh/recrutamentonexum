@@ -949,6 +949,18 @@ document.head.insertAdjacentHTML('beforeend', '<style>.cv-box{display:flex;gap:1
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
 <script>
 /* =====================================================================
    LOTE 32 (Candidato): ficha de pré-admissão. Quem aceitou a proposta
@@ -1121,6 +1133,84 @@ function cpResponder({ titulo, intro, chave, salvar, aoFim }) {
 @media (min-width:1001px) and (max-width:1500px){.rz-foto{right:-150px;opacity:.5}.rz-esq h1{font-size:clamp(32px,3.2vw,44px)}}
 @media (min-width:1001px) and (max-height:860px){.rz{padding:24px 56px;gap:44px}.rz-card{padding:26px 32px 20px}.rz-card h2{font-size:30px}.rz-card .rz-p{font-size:15.5px;margin:0 0 16px}.rz-card .rz-in .inp{height:50px}.rz-in{margin-bottom:11px}.rz-card #fa .btn:not(.ghost){height:52px}.rz-esq h1{margin-top:26px}.rz-tag{margin-top:12px}.rz-card .rz-seg{margin-top:14px;padding-top:12px}.rz-txt{font-size:16px}}
 `; document.head.appendChild(st); })();
+
+</script>
+<script>
+/* =====================================================================
+   LOTE 36 parte 3 (Candidato): CEP para calcular a distância até a loja,
+   "Prepare-se para a entrevista" e currículo montado pela IA.
+   ===================================================================== */
+(function () { const st = document.createElement('style'); st.textContent = `.pp36{margin:4px 0 10px;border:1px solid var(--line);border-radius:14px;padding:0 14px;background:var(--card,#fff)}.pp36>summary{cursor:pointer;padding:12px 0;font-weight:700;list-style:none;display:flex;align-items:center;gap:8px}.pp36>summary::-webkit-details-marker{display:none}.pp36>summary::after{content:'▾';margin-left:auto;color:var(--mut)}.pp36[open]>summary::after{content:'▴'}
+.pp36 h4{margin:12px 0 6px;font-size:14px}.pp36 ul{margin:0;padding-left:18px}.pp36 li{margin:3px 0}.pp36 .ck{list-style:none;padding:0}.pp36 .ck label{display:flex;gap:8px;align-items:flex-start;cursor:pointer}.pp36 .pd{padding-bottom:12px}
+.cv36p{border:1px solid var(--line);border-radius:12px;padding:12px;margin-top:10px;max-height:46vh;overflow:auto}.cv36p h4{margin:10px 0 4px;font-size:14px}.cv36p p{margin:0 0 6px;white-space:pre-wrap}`; document.head.appendChild(st); })();
+
+/* ---------- CEP e bairro no perfil (opcionais): a empresa vê só a distância aproximada até a loja ---------- */
+{ const _ep36 = editarPerfil; editarPerfil = function () { const r = _ep36.apply(this, arguments); try {
+  const c = document.getElementById('pf-c'), m = c && c.closest('.modal'); if (!c || document.getElementById('pf-cep')) return r; const p = P.perfil || {};
+  c.closest('.fld').insertAdjacentHTML('afterend', `<div class="fld"><label for="pf-cep">CEP <span class="hint">(opcional)</span></label><input class="inp" id="pf-cep" inputmode="numeric" maxlength="9" placeholder="85850-000" value="${esc(String(p.cep || '').replace(/^(\d{5})(\d{3})$/, '$1-$2'))}"></div><div class="fld"><label for="pf-ba">Bairro <span class="hint">(opcional)</span></label><input class="inp" id="pf-ba" maxlength="60" value="${esc(p.bairro || '')}"><span class="hint">Serve só para a empresa saber se a loja fica perto de você. Seu endereço completo não é pedido.</span></div>`);
+  const cep = $('#pf-cep', m); cep.oninput = () => { const d = cep.value.replace(/\D/g, '').slice(0, 8); cep.value = d.length > 5 ? d.slice(0, 5) + '-' + d.slice(5) : d; };
+  cep.onblur = async () => { const d = cep.value.replace(/\D/g, ''); if (d.length !== 8 || $('#pf-ba', m).value.trim()) return; try { const j = await (await fetch('https://brasilapi.com.br/api/cep/v2/' + d)).json(); if (j.neighborhood && !$('#pf-ba', m).value.trim()) $('#pf-ba', m).value = j.neighborhood; if (j.city && !$('#pf-c', m).value.trim()) $('#pf-c', m).value = j.city; } catch (e) { } };
+  $('#pf-ok', m).addEventListener('click', () => { const v = { cep: cep.value.replace(/\D/g, ''), bairro: $('#pf-ba', m).value.trim().slice(0, 60) }; if (v.cep && v.cep.length !== 8) v.cep = '';
+    let n = 0; const t = setInterval(async () => { n++; if (document.getElementById('pf-ok') && n < 60) return; clearInterval(t); if (document.getElementById('pf-ok') || !P.user) return; if ((P.perfil || {}).cep === v.cep && (P.perfil || {}).bairro === v.bairro) return;
+      try { await db.doc(`candidatos/${P.user.uid}`).set(v, { merge: true }); P.perfil = { ...(P.perfil || {}), ...v }; for (const a of (P.apps || []).filter(a => !final(etapaC(a)))) await sub(EID, 'apps').doc(a.id).update({ 'perfil.cep': v.cep, 'perfil.bairro': v.bairro }).catch(() => { }); } catch (e) { console.warn(e); } }, 250); }, true);
+} catch (e) { console.warn(e); } return r; }; }
+
+/* ---------- N2: Prepare-se para a entrevista ---------- */
+const PP36_PERG = {
+  vendas: ['Conte sobre uma venda difícil que você conseguiu fechar.', 'Como você atende um cliente que está indeciso?', 'O cliente diz que achou mais barato na internet. O que você responde?', 'Como você lida com meta de vendas?'],
+  caixa: ['Já trabalhou com dinheiro, cartão e Pix? Como era o fechamento?', 'O que você faz se faltar dinheiro no caixa?', 'Como você atende uma fila grande sem perder a calma?', 'Como confere se uma nota é verdadeira?'],
+  estoque: ['Como você organiza um estoque?', 'O que faz quando a mercadoria chega diferente da nota fiscal?', 'Já fez inventário ou contagem? Como foi?', 'Como evita que produtos se percam ou estraguem?'],
+  tecnico: ['Quais reparos você já fez em celulares?', 'Como explica um defeito para um cliente que não entende de tecnologia?', 'O que faz quando não sabe resolver um problema?', 'Como organiza vários aparelhos para consertar no mesmo dia?'],
+  gerente: ['Como você motiva a equipe num mês fraco?', 'Conte sobre um conflito na equipe que você resolveu.', 'Como acompanha as metas da loja?', 'Como você dá um retorno difícil para um funcionário?'],
+  geral: ['Fale um pouco sobre você.', 'Por que você quer trabalhar aqui?', 'Conte uma situação difícil no trabalho e como você resolveu.', 'Qual é o seu ponto forte e o que você está melhorando?']
+};
+const pp36Tipo = t => { t = String(t || '').toLowerCase(); return /caixa|operador/.test(t) ? 'caixa' : /estoqu|repositor|almox|logíst/.test(t) ? 'estoque' : /técnic|tecnic|assist|reparo/.test(t) ? 'tecnico' : /gerente|supervis|líder|lider|coordena/.test(t) ? 'gerente' : /vend|consult|promot|atend/.test(t) ? 'vendas' : 'geral'; };
+function pp36Html(a, e) {
+  const tp = pp36Tipo(a.vagaTitulo), pr = [...PP36_PERG[tp], ...(tp === 'geral' ? [] : PP36_PERG.geral.slice(0, 2))], ck = (() => { try { return JSON.parse(localStorage.getItem('rs:pp36:' + e.id) || '{}'); } catch (x) { return {}; } })();
+  const lista = e.tipo === 'video' ? ['Testei a câmera, o microfone e a internet', 'Escolhi um lugar silencioso e com luz de frente', 'Celular carregado (ou no carregador)', 'Vou entrar na sala 5 minutos antes'] : e.tipo === 'presencial' ? ['Sei como chegar e quanto tempo leva', 'Separei um documento com foto', 'Escolhi uma roupa simples e arrumada', 'Vou chegar 10 minutos antes'] : ['Celular carregado e com sinal', 'Vou atender num lugar silencioso', 'Deixei papel e caneta por perto'];
+  const mapa = e.tipo === 'presencial' && e.local ? `<p style="margin:8px 0 0"><a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(e.local)}" target="_blank" rel="noopener">📍 Ver como chegar: ${esc(e.local)}</a></p>` : '';
+  return `<details class="pp36" data-pp="${e.id}"><summary>🎯 Prepare-se para a entrevista</summary><div class="pd">
+    <h4>Antes de começar</h4><ul class="ck">${lista.map((t, i) => `<li><label><input type="checkbox" data-pk="${i}" ${ck[i] ? 'checked' : ''}> ${t}</label></li>`).join('')}</ul>${mapa}
+    <h4>Perguntas que costumam aparecer</h4><ul>${pr.map(q => `<li>${q}</li>`).join('')}</ul>
+    <h4>Como responder bem</h4><ul><li>Use exemplos reais: conte a <b>situação</b>, <b>o que você fez</b> e <b>o resultado</b>.</li><li>Seja sincero(a): não precisa ter resposta perfeita, e não tem problema dizer que ainda está aprendendo algo.</li><li>Pesquise a empresa antes (Instagram, site, avaliações) e diga o que você gostou.</li></ul>
+    <h4>Para perguntar no final</h4><ul><li>Como é um dia normal nessa função?</li><li>O que faz alguém se dar bem na equipe de vocês?</li><li>Quais são os próximos passos do processo?</li></ul></div></details>`;
+}
+{ const _vm36 = vMinhas; vMinhas = function (el) { const r = _vm36.apply(this, arguments); try {
+  (P.apps || []).forEach(a => (P.ents || []).filter(e => e.appId === a.id && e.status === 'agendada' && Date.parse(e.inicio) + (+e.duracao || 30) * 60000 > Date.now()).forEach(e => {
+    const b = el.querySelector(`[data-ics="${e.id}"]`) || el.querySelector(`[data-cf="${a.id}|${e.id}"]`) || el.querySelector(`[data-sl="${e.id}"]`), ac = b && b.closest('.acao'); if (!ac || el.querySelector(`[data-pp="${e.id}"]`)) return;
+    ac.insertAdjacentHTML('afterend', pp36Html(a, e)); const d = el.querySelector(`[data-pp="${e.id}"]`);
+    $$('[data-pk]', d).forEach(i => i.onchange = () => { const o = {}; $$('[data-pk]', d).forEach(x => o[x.dataset.pk] = x.checked); try { localStorage.setItem('rs:pp36:' + e.id, JSON.stringify(o)); } catch (x) { } }); }));
+} catch (e) { console.warn(e); } return r; }; }
+
+/* ---------- 94: currículo montado pela IA ---------- */
+const CV36 = { base: null };
+async function cv36Base() { if (CV36.base !== null) return CV36.base; try { const r = await fetch('https://firestore.googleapis.com/v1/projects/nexum-30044/databases/(default)/documents/plataforma/publico?key=AIzaSyDdcLJdO2qnmiGsR1EsKFu-uJfs4FRNvA4'); const f = r.ok ? ((await r.json()).fields || {}) : {}; CV36.base = String((f.asaasUrl || {}).stringValue || '').replace(/\/+$/, ''); } catch (e) { CV36.base = ''; } return CV36.base; }
+async function cv36Pedir(texto) {
+  const base = await cv36Base(); if (!base || !auth.currentUser) throw new Error('A ajuda da IA não está disponível agora. Preencha o perfil normalmente.');
+  const tk = await auth.currentUser.getIdToken(), p = P.perfil || {}, r = await fetch(base + '/api/rs/cand-ia', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tk }, body: JSON.stringify({ tarefa: 'curriculo', texto: texto.slice(0, 3000), cidade: p.cidade || '', interesses: (p.interesses || []).slice(0, 6) }) });
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.erro || 'A IA não respondeu agora. Tente de novo em alguns minutos.'); return j;
+}
+function cv36Abrir() {
+  const p = P.perfil || {}, ini = [p.resumo || '', ...(p.experiencias || []).map(x => `${x.cargo || ''} na ${x.empresa || ''} ${x.periodo || ''}: ${x.atividades || ''}`), ...(p.formacao || []).map(x => `${x.curso || ''} ${x.instituicao || ''} ${x.situacao || ''}`)].filter(x => x.trim()).join('\n');
+  modal('Montar meu currículo com a IA', `<p class="hint" style="margin-top:0">Escreva do seu jeito, sem se preocupar com português ou formato: onde trabalhou, quanto tempo, o que fazia, cursos e o que sabe fazer. A IA organiza e escreve de forma profissional, sem inventar nada. Você revisa antes de salvar.</p>
+    <div class="fld"><label for="cv36-t">Sua história profissional</label><textarea class="inp" id="cv36-t" maxlength="3000" style="min-height:170px" placeholder="Ex.: trabalhei 2 anos na loja X vendendo celular e acessório, fazia caixa também quando faltava gente. terminei o ensino médio em 2021, fiz curso de excel online. sei mexer bem em celular e falo um pouco de espanhol">${esc(ini)}</textarea></div><div id="cv36-r"></div>`, {
+    size: 'lg', foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="cv36-go">Organizar com a IA</button>', onMount: m => {
+      let res = null; const go = $('#cv36-go', m);
+      go.onclick = async () => {
+        if (res) { const d = { ...(P.perfil || {}), resumo: res.resumo || p.resumo || '', habilidades: [...new Set([...(p.habilidades || []), ...(res.habilidades || [])])].slice(0, 20), experiencias: (res.experiencias || []).length ? res.experiencias : (p.experiencias || []), formacao: (res.formacao || []).length ? res.formacao : (p.formacao || []), atualizadoEm: agora() };
+          go.disabled = true; try { await db.doc(`candidatos/${P.user.uid}`).set(d); P.perfil = d; const pub = { ...d }; delete pub.lgpd; delete pub.criadoEm; for (const a of (P.apps || []).filter(a => !final(etapaC(a)))) await sub(EID, 'apps').doc(a.id).update({ perfil: pub }).catch(() => { });
+            closeModal(true); if (!d.nome || !d.telefone) { toast('Perfil atualizado. Complete nome e WhatsApp para gerar o PDF.'); return editarPerfil(); } gerarMeuCurriculo(); } catch (er) { go.disabled = false; toast(msgErro(er), true); } return; }
+        const t = $('#cv36-t', m).value.trim(); if (t.length < 40) return toast('Conte um pouco mais: pelo menos duas ou três frases.', true);
+        go.disabled = true; go.textContent = 'Organizando…'; $('#cv36-r', m).innerHTML = '';
+        try { res = await cv36Pedir(t); const L = (x, f) => (x || []).map(f).join('');
+          $('#cv36-r', m).innerHTML = `<div class="cv36p"><h4>Resumo</h4><p>${esc(res.resumo || '')}</p>${(res.experiencias || []).length ? `<h4>Experiência</h4>${L(res.experiencias, x => `<p><b>${esc(x.cargo)}</b>${x.empresa ? ', ' + esc(x.empresa) : ''}${x.periodo ? ` · ${esc(x.periodo)}` : ''}${x.atividades ? `<br>${esc(x.atividades)}` : ''}</p>`)}` : ''}
+            ${(res.formacao || []).length ? `<h4>Formação</h4>${L(res.formacao, x => `<p>${esc(x.curso)}${x.instituicao ? ', ' + esc(x.instituicao) : ''}${x.situacao ? ` · ${esc(x.situacao)}` : ''}</p>`)}` : ''}${(res.habilidades || []).length ? `<h4>Habilidades</h4><p>${esc(res.habilidades.join(', '))}</p>` : ''}</div><p class="hint">Confira se está tudo certo. Se algo estiver errado, ajuste o texto acima e organize de novo, ou edite depois no perfil.</p>`;
+          go.textContent = 'Usar no perfil e gerar o PDF';
+          $('#cv36-t', m).oninput = () => { res = null; go.textContent = 'Organizar com a IA'; };
+        } catch (er) { toast(er.message, true); go.textContent = 'Organizar com a IA'; } go.disabled = false; };
+    } });
+}
+{ const _vp36 = vPerfil; vPerfil = function (el) { const r = _vp36.apply(this, arguments); try { const g = $('#cv-g', el); if (g && !$('#cv36-b', el)) { g.insertAdjacentHTML('beforebegin', '<button class="btn sec" id="cv36-b">✨ Montar com a IA</button>'); $('#cv36-b', el).onclick = cv36Abrir; } } catch (e) { console.warn(e); } return r; }; }
 
 </script>
 </body></html>

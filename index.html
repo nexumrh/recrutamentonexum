@@ -2632,6 +2632,30 @@ if (typeof vQuest === 'function') { const _vqSim = vQuest; vQuest = function (el
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <script>
 /* =====================================================================
    LOTE 28 (Recrutador): menu Treinamento com as videoaulas só do
@@ -3119,6 +3143,209 @@ setInterval(rs35Ciclo, 120000); setTimeout(rs35Ciclo, 6000); setTimeout(rs35Cicl
   b.insertAdjacentHTML('afterbegin', `<div id="wc35" class="note" style="margin:0 0 10px">${l.map(e => `📱 Entrevista de ${fdt(e.inicio)}: ${e.remarcar ? '<b style="color:var(--bad)">pediu para remarcar</b>' : conf[e.id] ? '<b style="color:var(--ok,#0F7A4F)">confirmada</b>' : 'aguardando a resposta no WhatsApp'}`).join('<br>')}</div>`); }, 80); } catch (e) { } return r; }; }
 /* admissão no NEXUM RH: leva a previsão do questionário comportamental */
 { const _pr35 = payloadRH; payloadRH = function (a) { const r = _pr35.apply(this, arguments); try { const pv = privDe(a.id).comport; if (pv && pv.ia && pv.p) r.comport = { rec: String(pv.ia.recomendacao || ''), nota: +pv.ia.nota || 0, resumo: String(pv.ia.resumo || '').slice(0, 400), em: String((a.comport || {}).respondidoEm || '') }; } catch (e) { } return r; }; }
+
+</script>
+<script>
+/* =====================================================================
+   LOTE 36 (Recrutador): distância até a loja, salário de mercado (IA),
+   teste de fit cultural, testes práticos de caixa e estoque, reabrir vaga
+   chamando os finalistas, campanha de temporada, agenda no celular e
+   retorno personalizado com IA para quem não passou.
+   ===================================================================== */
+(function () { const st = document.createElement('style'); st.textContent = `.rs36d{display:inline-block;margin-top:4px;font-size:12px;color:var(--mut);font-weight:600}
+.rs36-box{border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-top:8px;background:var(--bg2,rgba(18,80,212,.04))}.rs36-box b{font-size:15px}
+.rs36-sal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}.rs36-sal div{border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}.rs36-sal span{display:block;font-size:12px;color:var(--mut)}.rs36-sal strong{font-size:16px}
+.rs36-val{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px}.rs36-val label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:10px;padding:10px;cursor:pointer}.rs36-val label:has(input:checked){border-color:var(--pri,#1250d4);background:rgba(18,80,212,.06)}
+.rs36-cg{display:grid;grid-template-columns:1fr 90px;gap:8px;align-items:center}`; document.head.appendChild(st); })();
+const rs36Sleep = ms => new Promise(r => setTimeout(r, ms));
+const rs36Json = t => { const m = String(t || '').match(/\{[\s\S]*\}/); if (!m) throw new Error('A IA não respondeu no formato esperado.'); return JSON.parse(m[0]); };
+const rs36Brl = v => (+v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+
+/* =================== N1: distância da casa do candidato até a loja =================== */
+const RS36G = { fila: Promise.resolve(), feitos: new Set(), rodando: false };
+function rs36GeoCache(k, v) { const ch = 'rs:geo:' + k.toLowerCase(); try { if (v !== undefined) { localStorage.setItem(ch, JSON.stringify(v)); return v; } return JSON.parse(localStorage.getItem(ch) || 'null'); } catch (e) { return null; } }
+/* geocodificação: CEP pela BrasilAPI; endereço ou bairro pelo OpenStreetMap (1 consulta por segundo, como pede o serviço) */
+function rs36Geo(q, cep) {
+  const k = cep ? 'cep:' + cep : 'q:' + q, c = rs36GeoCache(k); if (c) return Promise.resolve(c.lat ? c : null);
+  const job = RS36G.fila.then(async () => {
+    let r = null, qq = q;
+    if (cep) { try { const res = await fetch('https://brasilapi.com.br/api/cep/v2/' + cep); if (res.ok) { const j = await res.json(), co = (j.location || {}).coordinates || {}; if (co.latitude && co.longitude) r = { lat: +co.latitude, lng: +co.longitude }; else qq = [j.street, j.neighborhood, j.city, j.state].filter(Boolean).join(', '); } } catch (e) { } }
+    if (!r && qq) { try { const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=br&q=' + encodeURIComponent(qq), { headers: { 'Accept-Language': 'pt-BR' } }); if (res.ok) { const j = await res.json(); if (j[0]) r = { lat: +j[0].lat, lng: +j[0].lon }; } } catch (e) { } await rs36Sleep(1100); }
+    rs36GeoCache(k, r || { falhou: true, em: Date.now() }); return r;
+  }); RS36G.fila = job.catch(() => null); return job;
+}
+function rs36Km(a, b) { const R = 6371, rad = x => x * Math.PI / 180, dl = rad(b.lat - a.lat), dg = rad(b.lng - a.lng), h = Math.sin(dl / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dg / 2) ** 2; return 2 * R * Math.asin(Math.sqrt(h)); }
+async function rs36LojaGeo(l) { if (!l || !l.endereco) return null; if (l.lat && l.lng) return { lat: +l.lat, lng: +l.lng }; const g = await rs36Geo([l.endereco, l.cidade].filter(Boolean).join(', ')); if (g && ehEditor()) sub(S.eid, 'lojas').doc(l.id).update({ lat: g.lat, lng: g.lng }).catch(() => { }); return g; }
+const rs36Base = p => { const cep = String((p || {}).cep || '').replace(/\D/g, ''); return cep.length === 8 ? { cep, chave: cep } : (p || {}).bairro ? { q: `${p.bairro}, ${p.cidade || ''}`, chave: `${p.bairro}|${p.cidade || ''}` } : null; };
+const rs36Dist = a => (privDe(a.id) || {}).dist || null;
+async function rs36Calcular() {
+  if (RS36G.rodando || !S.eid) return; RS36G.rodando = true; let n = 0;
+  try { for (const a of S.d.apps.filter(a => !final(a) && !a.anonimizado && !RS36G.feitos.has(a.id))) {
+    RS36G.feitos.add(a.id); const b = rs36Base(a.perfil), l = lojaDe(vagaDe(a.vagaId).lojaId); if (!b || !l || !l.endereco) continue;
+    const d = rs36Dist(a); if (d && d.base === b.chave && d.lojaId === l.id) continue;
+    const [gl, gc] = [await rs36LojaGeo(l), await rs36Geo(b.q, b.cep)]; if (!gl || !gc) continue;
+    const km = Math.round(rs36Km(gl, gc) * 1.3 * 10) / 10; /* linha reta x 1,3: aproxima o caminho pelas ruas */
+    try { await sub(S.eid, 'priv').doc(a.id).set({ dist: { km, lojaId: l.id, loja: l.nome, base: b.chave, em: agora() } }, { merge: true }); n++; } catch (e) { }
+    if (n >= 40) break; } } finally { RS36G.rodando = false; }
+}
+const rs36KmTxt = km => km < 1 ? 'menos de 1 km' : `~${String(km < 10 ? Math.round(km * 10) / 10 : Math.round(km)).replace('.', ',')} km`;
+{ const _cc36 = cardCand; cardCand = function (a) { const h = _cc36.apply(this, arguments); try { const d = rs36Dist(a); if (!d || ocultar(a)) return h; const i = h.lastIndexOf('</button>'); return h.slice(0, i) + `<span class="rs36d" title="Distância aproximada pelas ruas até ${esc(d.loja || 'a loja')}">📍 mora a ${rs36KmTxt(d.km)}</span>` + h.slice(i); } catch (e) { return h; } }; }
+{ const _vc36 = vCands; vCands = function (el) { const r = _vc36.apply(this, arguments); try {
+  const cv = $('#cd-v', el), bar = cv ? cv.closest('.row') : el.querySelector('.row'); if (bar && !$('#cd-km', el)) { bar.insertAdjacentHTML('beforeend', `<select class="inp" id="cd-km" style="width:auto" aria-label="Distância até a loja">${opts([['', 'Qualquer distância'], ['3', 'Mora até 3 km'], ['5', 'Mora até 5 km'], ['10', 'Mora até 10 km'], ['20', 'Mora até 20 km']], S.rs36km || '')}</select>`); $('#cd-km', el).onchange = e => { S.rs36km = e.target.value; render(); }; }
+  if (S.rs36km) { const lim = +S.rs36km; let sem = 0; $$('[data-ab]', el).forEach(c => { const a = S.d.apps.find(x => x.id === c.dataset.ab), d = a && rs36Dist(a); if (!d) { sem++; c.style.opacity = '.45'; c.title = 'Sem endereço para calcular a distância'; } else if (d.km > lim) c.remove(); });
+    $$('.kcol', el).forEach(k => { const h = $('h3 .hint', k); if (h) h.textContent = $$('[data-ab]', k).length; }); if (sem && bar) bar.insertAdjacentHTML('afterend', `<p class="hint" style="margin:-6px 0 10px">${sem} candidato(s) ainda sem CEP ou bairro aparecem apagados: a distância deles não pôde ser calculada.</p>`); }
+  setTimeout(rs36Calcular, 400);
+} catch (e) { console.warn(e); } return r; }; }
+
+/* =================== N8: salário de mercado (estimativa da IA) =================== */
+async function rs36Salario(m) {
+  const t = $('#v-t', m).value.trim(), loc = $('#v-l', m).value.trim() || S.emp.cidade || '', ct = $('#v-c', m).value, box = $('#rs36-sb', m);
+  if (!t) return toast('Escreva o título da vaga primeiro.', true); box.innerHTML = '<p class="hint" style="margin:0">Consultando a IA…</p>';
+  try { const r = rs36Json(await groq([{ role: 'system', content: 'Você é um especialista em remuneração no varejo brasileiro. Estime o salário mensal de mercado (valor bruto em carteira, sem comissão) para a vaga informada, na cidade informada, com base no que você sabe sobre pisos de categoria e anúncios de emprego. Não invente precisão: dê uma faixa realista. Responda só com JSON: {"min": número, "medio": número, "max": número, "comissao": "texto curto sobre comissão ou variável comum nessa função, ou vazio", "obs": "uma frase sobre o que influencia o valor, como piso do sindicato do comércio da região"}' },
+      { role: 'user', content: `Vaga: ${t}\nCidade: ${loc}\nContrato: ${ct}\nÁrea: ${$('#v-a', m).value}` }]));
+    const mn = +r.min, md = +r.medio, mx = +r.max; if (!(md > 0)) throw new Error('A IA não trouxe valores.');
+    box.innerHTML = `<div class="rs36-box"><b>Salário de mercado (estimativa)</b><div class="rs36-sal"><div><span>Mínimo</span><strong>${rs36Brl(mn)}</strong></div><div><span>Média</span><strong>${rs36Brl(md)}</strong></div><div><span>Máximo</span><strong>${rs36Brl(mx)}</strong></div></div>${r.comissao ? `<p class="hint" style="margin:0 0 4px">${esc(String(r.comissao).slice(0, 200))}</p>` : ''}<p class="hint" style="margin:0 0 8px">${esc(String(r.obs || '').slice(0, 240))} É uma estimativa da IA: confira o piso da convenção coletiva da sua região.</p><button type="button" class="btn sec sm" id="rs36-us">Usar a média no anúncio</button></div>`;
+    $('#rs36-us', m).onclick = () => { const s = $('#v-s', m); s.value = rs36Brl(md) + (/comiss/i.test(s.value) ? ' + comissão' : ''); s.focus(); };
+  } catch (e) { box.innerHTML = `<p class="hint" style="margin:0;color:var(--bad)">${esc(e.message || 'Não deu para consultar agora.')}</p>`; }
+}
+{ const _fv36 = formVaga; formVaga = function () { const r = _fv36.apply(this, arguments); try { const s = document.getElementById('v-s'), m = s && s.closest('.modal'); if (s && !document.getElementById('rs36-sm')) { const f = s.closest('.fld'); f.insertAdjacentHTML('beforeend', '<button type="button" class="btn ghost sm" id="rs36-sm" style="margin-top:4px">Ver salário de mercado (IA)</button><div id="rs36-sb"></div>'); f.classList.add('full'); $('#rs36-sm', m).onclick = () => rs36Salario(m); } } catch (e) { console.warn(e); } return r; }; }
+
+/* =================== 92: testes práticos de caixa e de estoque (modelos prontos) =================== */
+try { MODELOS_Q.push(
+  { titulo: 'Teste prático: operador(a) de caixa', finalidade: 'candidato', instrucoes: 'Situações reais do caixa: troco, desconto, parcelas e fechamento. Pode usar a calculadora do celular. Tempo: 12 minutos.', tempoMin: 12, notaMin: 70, perguntas: [
+    { tipo: 'unica', texto: 'A compra deu R$ 37,40 e o cliente pagou com uma nota de R$ 50,00. Qual é o troco?', opcoes: ['R$ 13,60', 'R$ 12,60', 'R$ 12,40', 'R$ 13,40'], corretas: [1], peso: 1 },
+    { tipo: 'unica', texto: 'A compra deu R$ 84,90. O cliente entregou uma nota de R$ 100,00 e mais R$ 4,90 em moedas. Qual é o troco?', opcoes: ['R$ 15,10', 'R$ 19,90', 'R$ 20,00', 'R$ 10,00'], corretas: [2], peso: 1 },
+    { tipo: 'unica', texto: 'Um celular de R$ 1.200,00 tem 8% de desconto à vista. Quanto o cliente paga?', opcoes: ['R$ 1.104,00', 'R$ 1.192,00', 'R$ 1.120,00', 'R$ 1.008,00'], corretas: [0], peso: 1 },
+    { tipo: 'unica', texto: 'R$ 1.499,00 em 10 vezes sem juros. Qual é o valor de cada parcela?', opcoes: ['R$ 150,00', 'R$ 149,00', 'R$ 14,99', 'R$ 149,90'], corretas: [3], peso: 1 },
+    { tipo: 'unica', texto: 'O caixa abriu com R$ 150,00 de troco. As vendas em dinheiro somaram R$ 1.320,00 e foi feita uma sangria de R$ 1.000,00. Quanto deve ter na gaveta no fechamento?', opcoes: ['R$ 320,00', 'R$ 1.470,00', 'R$ 470,00', 'R$ 570,00'], corretas: [2], peso: 2 },
+    { tipo: 'unica', texto: 'O cliente diz que pagou por Pix e mostra o comprovante na tela do celular. O que você faz?', opcoes: ['Libero a compra: o comprovante basta', 'Confiro no sistema ou no extrato se o valor entrou antes de liberar', 'Peço o print pelo WhatsApp e libero', 'Libero se for cliente conhecido'], corretas: [1], peso: 2 },
+    { tipo: 'unica', texto: 'Você desconfia que uma nota de R$ 100,00 é falsa. O que faz?', opcoes: ['Aceito para não constranger o cliente', 'Digo em voz alta que a nota é falsa', 'Confiro marca d\'água, faixa holográfica e número que muda de cor; se continuar a dúvida, chamo o gerente com discrição', 'Recuso sem explicar'], corretas: [2], peso: 2 },
+    { tipo: 'longa', texto: 'No fechamento faltaram R$ 30,00 no caixa. O que você faz, passo a passo?', peso: 2 }] },
+  { titulo: 'Teste prático: estoque e conferência', finalidade: 'candidato', instrucoes: 'Situações reais de recebimento, contagem e organização. Pode usar a calculadora do celular. Tempo: 12 minutos.', tempoMin: 12, notaMin: 70, perguntas: [
+    { tipo: 'unica', texto: 'Chegaram 12 caixas com 24 capinhas cada. Na conferência, 7 capinhas estavam danificadas. Quantas entram no estoque?', opcoes: ['288', '274', '281', '295'], corretas: [2], peso: 1 },
+    { tipo: 'unica', texto: 'A nota fiscal diz 50 películas, mas você contou 46. O que faz?', opcoes: ['Registro a divergência no canhoto ou no sistema e aviso o responsável antes de dar entrada', 'Dou entrada de 50, como está na nota', 'Dou entrada de 46 sem avisar ninguém', 'Devolvo toda a mercadoria'], corretas: [0], peso: 2 },
+    { tipo: 'unica', texto: 'O sistema mostra 15 carregadores. Você contou 12 na prateleira e sabe de 2 vendas que ainda não foram lançadas. Qual é a situação?', opcoes: ['Está tudo certo', 'Faltam 3 unidades', 'Sobra 1 unidade', 'Falta 1 unidade'], corretas: [3], peso: 2 },
+    { tipo: 'unica', texto: 'O estoque mínimo de um produto é 20 unidades. A loja vende 4 por dia e o fornecedor entrega em 3 dias. Quando você deve fazer o pedido?', opcoes: ['Quando chegar a 32 unidades', 'Quando chegar a 20 unidades', 'Quando acabar', 'Quando chegar a 12 unidades'], corretas: [0], peso: 2 },
+    { tipo: 'unica', texto: 'Qual produto deve sair primeiro da prateleira?', opcoes: ['O que chegou por último', 'O que está mais na frente', 'O que chegou primeiro (ou vence primeiro)', 'Tanto faz'], corretas: [2], peso: 1 },
+    { tipo: 'varias', texto: 'Quais são boas práticas no estoque?', opcoes: ['Etiquetar e separar por categoria', 'Deixar caixas abertas no chão para achar mais rápido', 'Registrar toda saída no sistema', 'Conferir a mercadoria na frente do entregador'], corretas: [0, 2, 3], peso: 2 },
+    { tipo: 'longa', texto: 'Você chegou e o estoque está bagunçado. Como você organiza no primeiro dia?', peso: 2 }] }); } catch (e) { }
+
+/* =================== N11: teste de fit cultural (valores da empresa) =================== */
+const RS36_VAL = {
+  cliente: ['Cliente em primeiro lugar', [['Um cliente chega 5 minutos antes de a loja fechar e você já estava organizando tudo para sair. O que você faz?', ['Peço para ele voltar amanhã', 'Atendo com calma, como qualquer outro cliente', 'Atendo bem rápido para não atrasar', 'Chamo outra pessoa para atender'], 1],
+    ['Um cliente volta reclamando de um produto que comprou com você. Como você age?', ['Escuto com atenção e procuro resolver ou encaminhar na hora', 'Digo que a culpa é do fabricante', 'Peço para ele falar com o gerente outro dia', 'Explico que não posso fazer nada'], 0]]],
+  ritmo: ['Ritmo acelerado', [['Na Black Friday a loja fica cheia o dia todo. Como você se sente nesse tipo de dia?', ['Prefiro evitar esses dias', 'Fico muito tenso(a)', 'Gosto: o dia passa rápido e dá para fazer muito', 'Tanto faz'], 2],
+    ['Você terminou as suas tarefas e o movimento está alto. O que faz?', ['Espero o gerente passar outra tarefa', 'Ajudo onde precisa, sem esperar pedirem', 'Aproveito para descansar um pouco', 'Fico disponível no balcão, sem me mexer'], 1]]],
+  equipe: ['Trabalho em equipe', [['Um colega está com vários clientes e você está livre. O que faz?', ['Ofereço ajuda e divido os atendimentos', 'Cada um cuida dos seus clientes', 'Só ajudo se o gerente pedir', 'Pego os clientes dele para aumentar a minha comissão'], 0],
+    ['A meta deste mês é da loja inteira, não individual. O que você acha?', ['Prefiro só meta individual', 'Acho injusto', 'Gosto: todo mundo puxa junto', 'Tanto faz'], 2]]],
+  processo: ['Disciplina com processos', [['Existe um passo a passo para abrir o caixa que parece demorado. O que você faz?', ['Pulo as partes que acho desnecessárias', 'Faço do meu jeito', 'Sigo o passo a passo e, se tiver uma ideia melhor, sugiro ao gerente', 'Peço para outra pessoa abrir'], 2],
+    ['Você percebe que colocou o preço errado na etiqueta de um produto. O que faz?', ['Deixo: ninguém vai notar', 'Corrijo na hora e aviso quem precisa saber', 'Espero alguém reclamar', 'Tiro o produto da vitrine'], 1]]],
+  autonomia: ['Autonomia e iniciativa', [['O gerente não está e um cliente pede uma condição que você não sabe se pode dar. O que faz?', ['Digo que não dá e pronto', 'Dou a condição sem perguntar', 'Resolvo o que posso, explico ao cliente e confirmo o resto com o gerente', 'Peço para o cliente voltar outro dia'], 2],
+    ['Você nota que um produto vende muito e sempre falta. O que faz?', ['Aviso o responsável com os números e sugiro aumentar o pedido', 'Não é minha função', 'Espero alguém perceber', 'Comento com os colegas'], 0]]],
+  aprender: ['Vontade de aprender', [['Chegou um modelo novo de celular que você não conhece. O que faz?', ['Espero alguém me explicar', 'Estudo as funções antes de atender e pergunto o que não sei', 'Vendo do mesmo jeito', 'Indico outro vendedor para esse produto'], 1],
+    ['O gerente aponta um erro seu no atendimento. Como você reage?', ['Explico que não foi culpa minha', 'Fico chateado(a) e não falo nada', 'Concordo, mas continuo do mesmo jeito', 'Agradeço, pergunto como fazer melhor e aplico'], 3]]],
+  honestidade: ['Honestidade e transparência', [['No fechamento sobraram R$ 20,00 no caixa. O que você faz?', ['Aviso o gerente e registro a diferença', 'Guardo para cobrir uma falta futura', 'Não falo nada', 'Divido com os colegas'], 0],
+    ['O cliente pergunta se o celular aguenta queda e você sabe que não aguenta bem. O que responde?', ['Digo que aguenta, para fechar a venda', 'Mudo de assunto', 'Falo a verdade e ofereço capinha e película', 'Digo que não sei'], 2]]]
+};
+function rs36Fit() {
+  const sel = new Set((S.emp.rs36valores || ['cliente', 'equipe', 'aprender']).filter(k => RS36_VAL[k]));
+  modal('Teste de fit cultural', `<p class="hint" style="margin-top:0">Escolha de 3 a 5 valores que mais combinam com a sua empresa. O sistema monta situações do dia a dia (duas por valor) e o candidato escolhe como agiria. Não existe pegadinha: mede se o jeito da pessoa combina com o da loja.</p>
+    <div class="rs36-val">${Object.entries(RS36_VAL).map(([k, v]) => `<label><input type="checkbox" data-vl="${k}" ${sel.has(k) ? 'checked' : ''}><span><b>${v[0]}</b></span></label>`).join('')}</div>`, {
+    foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="rs36-fo">Montar o questionário</button>', onMount: m => $('#rs36-fo', m).onclick = async () => { const ks = $$('[data-vl]:checked', m).map(i => i.dataset.vl); if (ks.length < 3 || ks.length > 5) return toast('Escolha de 3 a 5 valores.', true);
+      if (ehAdmin()) db.doc(`empresas/${S.eid}`).update({ rs36valores: ks }).catch(() => { }); S.emp.rs36valores = ks;
+      const perguntas = ks.flatMap(k => RS36_VAL[k][1].map(([texto, opcoes, c]) => ({ tipo: 'unica', texto, opcoes, corretas: [c], peso: 1, obrig: true, id: uid(6) })));
+      closeModal(true); formQuest({ id: null, titulo: `Fit cultural: ${ks.map(k => RS36_VAL[k][0].toLowerCase()).join(', ')}`.slice(0, 120), finalidade: 'candidato', instrucoes: 'Não existe resposta perfeita: marque como você agiria de verdade. Leva uns 4 minutos.', tempoMin: 0, notaMin: 60, perguntas }); } });
+}
+{ const _vq36 = vQuest; vQuest = function (el) { const r = _vq36.apply(this, arguments); try { if (ehEditor() && !$('#rs36-fit', el)) { const bar = el.querySelector('.row'); if (bar) bar.insertAdjacentHTML('beforeend', '<button class="btn sec" id="rs36-fit">Teste de fit cultural</button>'); const b = $('#rs36-fit', el); if (b) b.onclick = rs36Fit; } } catch (e) { console.warn(e); } return r; }; }
+
+/* =================== 87: reabrir vaga e chamar os finalistas =================== */
+function rs36Finalistas(v) { return S.d.apps.filter(a => a.vagaId === v.id && !a.anonimizado && etapaV(a) === 'reprovado' && (S.d.ent.some(e => e.appId === a.id) || (a.historico || []).some(h => /entrevista/i.test(h.t || '')))); }
+function rs36Reabrir(v) {
+  const fin = rs36Finalistas(v), msgP = a => `Olá, ${primeiro(a.perfil.nome)}! Reabrimos a vaga de ${v.titulo} e lembramos de você, que foi muito bem no nosso processo. Ainda tem interesse? Se sim, responda por aqui que já marcamos uma conversa.`;
+  modal(`Reabrir vaga · ${esc(v.titulo)}`, `<p class="hint" style="margin-top:0">A vaga volta a receber inscrições. ${fin.length ? 'Quem chegou à entrevista e não foi aprovado(a) da última vez pode ser chamado(a) de volta: ganha tempo e você já conhece a pessoa.' : 'Ninguém desta vaga chegou à entrevista da última vez.'}</p>
+    ${fin.length ? `<ul class="list">${fin.map(a => { const n = notas(a); return `<li><label class="row" style="flex:1;gap:8px;cursor:pointer"><input type="checkbox" data-rf="${a.id}" checked><span><b>${esc(a.perfil.nome)}</b><span class="hint" style="display:block">${n.ent ? `Entrevista ${String(n.ent).replace('.', ',')}` : 'Fez entrevista'}${(a.decisao || {}).em ? ` · resultado em ${fd(a.decisao.em)}` : ''}</span></span></label></li>`; }).join('')}</ul>` : ''}
+    <div class="fld"><label for="rs36-rp">Novo prazo de inscrições (opcional)</label><input class="inp" type="date" id="rs36-rp" min="${iso()}"></div>`, {
+    foot: `<button class="btn sec" data-close>Cancelar</button><button class="btn" id="rs36-ro">${fin.length ? 'Reabrir e chamar os marcados' : 'Reabrir vaga'}</button>`, onMount: m => $('#rs36-ro', m).onclick = async () => {
+      const ids = $$('[data-rf]:checked', m).map(i => i.dataset.rf), b = $('#rs36-ro', m); b.disabled = true;
+      try { await sub(S.eid, 'vagas').doc(v.id).update({ status: 'aberta', reabertaEm: agora(), ...($('#rs36-rp', m).value ? { prazo: $('#rs36-rp', m).value } : {}) }); log(`Reabriu a vaga ${v.titulo}${ids.length ? ` e chamou ${ids.length} finalista(s)` : ''}`);
+        const ws = []; for (const id of ids) { const a = S.d.apps.find(x => x.id === id); if (!a) continue; const t = msgP(a);
+          await sub(S.eid, 'apps').doc(id).update({ etapa: 'entrevista', decisao: null, retornoEm: null, atualizadoEm: agora(), mensagens: [...(a.mensagens || []), { de: 'rh', t, por: S.me.nome, em: agora() }], historico: [...(a.historico || []), { t: 'Chamado(a) de novo: a vaga foi reaberta', em: agora(), por: S.me.nome }] });
+          const w = waLink(a.perfil.telefone, t); if (w) ws.push([a.perfil.nome, w]); }
+        closeModal(true); if (!ws.length) return toast(ids.length ? 'Vaga reaberta. Os finalistas já receberam a mensagem no portal.' : 'Vaga reaberta.');
+        modal('Vaga reaberta', `<p style="margin-top:0">A mensagem já está no portal de cada pessoa. Quer avisar também pelo WhatsApp?</p><ul class="list">${ws.map(([n, w]) => `<li><div class="t"><div><b>${esc(n)}</b></div></div><a class="btn sec sm" href="${esc(w)}" target="_blank" rel="noopener">WhatsApp</a></li>`).join('')}</ul>`);
+      } catch (er) { b.disabled = false; toast(msgErro(er), true); } } });
+}
+
+/* =================== 89: campanha de temporada (várias vagas temporárias de uma vez) =================== */
+const RS36_TEMP = { natal: 'Natal', black: 'Black Friday', maes: 'Dia das Mães', pascoa: 'Páscoa', aulas: 'Volta às aulas', ferias: 'Férias de verão' };
+const RS36_CARGOS = [['Vendedor(a) temporário(a)', 'Vendas', 'Atender clientes, apresentar produtos e acessórios, fechar vendas e manter a loja organizada no período de maior movimento.', 'Gostar de atender pessoas. Experiência com vendas é um diferencial, mas não é obrigatória.'],
+  ['Operador(a) de caixa temporário(a)', 'Caixa', 'Registrar vendas, receber pagamentos em dinheiro, cartão e Pix, conferir valores e fechar o caixa.', 'Atenção com valores e boa matemática básica. Experiência em caixa é um diferencial.'],
+  ['Estoquista temporário(a)', 'Estoque e logística', 'Receber e conferir mercadorias, organizar o estoque, repor a loja e ajudar nas contagens.', 'Organização e atenção aos detalhes.'],
+  ['Promotor(a) de vendas temporário(a)', 'Vendas', 'Abordar clientes na loja, apresentar ofertas e direcionar para o vendedor ou o caixa.', 'Comunicação e simpatia.']];
+function rs36Campanha() {
+  const lj = S.d.lojas || [], prox = (() => { const m = new Date().getMonth(); return m >= 8 && m <= 10 ? 'natal' : m <= 2 ? 'pascoa' : m <= 4 ? 'maes' : 'ferias'; })();
+  modal('Campanha de temporada', `<p class="hint" style="margin-top:0">Cria várias vagas temporárias de uma vez, com descrição pronta, e já deixa o texto para divulgar. Quem for bem pode ser efetivado(a) depois.</p>
+    <div class="grid"><div class="fld"><label for="rs36-tp">Temporada</label><select class="inp" id="rs36-tp">${opts(Object.entries(RS36_TEMP), prox)}</select></div><div class="fld"><label for="rs36-lj">Loja</label><select class="inp" id="rs36-lj">${opts([['', lj.length ? 'Todas / não definida' : 'Sem lojas cadastradas'], ...lj.map(l => [l.id, l.nome])], '')}</select></div>
+    <div class="fld"><label for="rs36-pz">Inscrições até</label><input class="inp" type="date" id="rs36-pz" value="${iso(addD(new Date(), 14))}" min="${iso()}"></div><div class="fld"><label for="rs36-pr">Período do contrato</label><input class="inp" id="rs36-pr" placeholder="Ex.: 20/11 a 06/01"></div>
+    <div class="fld full"><label for="rs36-sl">Salário</label><input class="inp" id="rs36-sl" placeholder="Ex.: R$ 1.700 + comissão"></div></div>
+    <span class="lbl">Cargos e quantidade de vagas</span><div class="rs36-cg">${RS36_CARGOS.map((c, i) => `<label class="row" style="gap:8px"><input type="checkbox" data-cg="${i}" ${i < 2 ? 'checked' : ''}> ${c[0]}</label><input class="inp" type="number" min="1" value="${i === 0 ? 3 : 1}" data-cq="${i}" aria-label="Quantidade de ${c[0]}">`).join('')}</div>`, {
+    size: 'lg', foot: '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="rs36-cc">Criar vagas</button>', onMount: m => $('#rs36-cc', m).onclick = async () => {
+      const tp = RS36_TEMP[$('#rs36-tp', m).value], l = lojaDe($('#rs36-lj', m).value), per = $('#rs36-pr', m).value.trim(), sal = $('#rs36-sl', m).value.trim(), cs = $$('[data-cg]:checked', m).map(i => +i.dataset.cg); if (!cs.length) return toast('Escolha pelo menos um cargo.', true);
+      const b = $('#rs36-cc', m); b.disabled = true; const camp = { id: uid(8), nome: `${tp} ${new Date().getFullYear()}` }, criadas = [];
+      try { for (const i of cs) { const c = RS36_CARGOS[i], d = { titulo: `${c[0].replace(' temporário(a)', '')} · ${tp}`, area: c[1], local: l ? l.cidade || S.emp.cidade || '' : S.emp.cidade || '', modalidade: 'Presencial', contrato: 'Temporário', salario: sal, qtd: Math.max(1, +$(`[data-cq="${i}"]`, m).value || 1),
+          descricao: `Contratação temporária para ${tp}${per ? ` (${per})` : ''}. ${c[2]}\n\nQuem se destacar pode ser efetivado(a) depois da temporada.`, requisitos: c[3], beneficios: '', prazo: $('#rs36-pz', m).value, status: 'aberta', empresa: S.emp.nome || '', lojaId: l ? l.id : '', loja: l ? l.nome : '', lojaCidade: l ? l.cidade || '' : '', campanha: camp, criadoEm: agora(), por: S.me.nome };
+          const r = await sub(S.eid, 'vagas').add(d); criadas.push({ id: r.id, ...d }); }
+        log(`Criou a campanha ${camp.nome} com ${criadas.length} vaga(s)`); closeModal(true);
+        const txt = `🎄 ${tp} chegando e estamos contratando!\n\n${criadas.map(v => `• ${v.titulo.split(' · ')[0]}${v.qtd > 1 ? ` (${v.qtd} vagas)` : ''}`).join('\n')}\n\nContrato temporário${per ? ` de ${per}` : ''}${sal ? `, ${sal}` : ''}. Quem se destacar pode ser efetivado(a)!\n\nInscreva-se pelo link: ${linkPortal()}`.replace('🎄 ', tp === 'Natal' ? '🎄 ' : '📣 ');
+        modal('Campanha criada', `<p style="margin-top:0"><b>${criadas.length} vaga(s)</b> abertas para ${esc(tp)}. Texto pronto para Instagram, WhatsApp e status:</p><textarea class="inp" id="rs36-tx" style="min-height:190px">${esc(txt)}</textarea>`, { foot: `<button class="btn sec" id="rs36-bk">Convidar do banco de talentos</button><a class="btn sec" href="https://wa.me/?text=${encodeURIComponent(txt)}" target="_blank" rel="noopener">WhatsApp</a><button class="btn" id="rs36-cp">Copiar texto</button>`, onMount: mm => {
+          $('#rs36-cp', mm).onclick = () => { navigator.clipboard.writeText($('#rs36-tx', mm).value).then(() => toast('Texto copiado.')).catch(() => toast('Selecione e copie o texto.', true)); };
+          $('#rs36-bk', mm).onclick = () => { closeModal(true); setTimeout(() => { const v = S.d.vagas.find(x => x.id === criadas[0].id) || criadas[0]; convidarBanco(v); }, 400); }; } });
+      } catch (er) { b.disabled = false; toast(msgErro(er), true); } } });
+}
+{ const _vl36 = vVagasLista; vVagasLista = function (el) { const r = _vl36.apply(this, arguments); try {
+  if (!ehEditor()) return r; const n = $('#vg-n', el); if (n && !$('#rs36-camp', el)) { n.insertAdjacentHTML('beforebegin', '<button class="btn sec" id="rs36-camp">Campanha de temporada</button>'); $('#rs36-camp', el).onclick = rs36Campanha; }
+  $$('[data-vc]', el).forEach(bt => { const v = vagaDe(bt.dataset.vc), ml = bt.closest('td') && bt.closest('td').querySelector('.mn-l'); if (!v.id || v.status !== 'fechada' || !ml || ml.querySelector('[data-rs36r]')) return; ml.insertAdjacentHTML('afterbegin', `<button class="btn ghost sm" data-rs36r="${v.id}">Reabrir e chamar finalistas</button>`); ml.querySelector('[data-rs36r]').onclick = () => rs36Reabrir(v); });
+} catch (e) { console.warn(e); } return r; }; }
+
+/* =================== 95: retorno personalizado com IA para quem não passou =================== */
+async function rs36Retorno(a, m) {
+  const v = vagaDe(a.vagaId), n = notas(a), p = privDe(a.id) || {}, ta = $('#dc-m', m), b = $('#rs36-ia', m); b.disabled = true; b.textContent = 'Escrevendo…';
+  const pontos = [n.tri && n.tri.pct != null ? `triagem ${n.tri.pct}%` : '', ...n.testes.map(t => t.pct != null ? `${t.t.titulo}: ${t.pct}%` : ''), n.ent ? `entrevista ${n.ent} de 5` : ''].filter(Boolean).join('; ');
+  const fortes = Object.values(p.entrevistas || {}).flatMap(x => [x.fortes, x.pontosFortes, x.obs].filter(y => typeof y === 'string')).join(' ').slice(0, 600);
+  try { const r = rs36Json(await groq([{ role: 'system', content: 'Você escreve o retorno para um candidato que não foi aprovado num processo seletivo de varejo no Brasil. Tom: respeitoso, humano e direto, em português do Brasil, falando com a pessoa pelo primeiro nome. Estrutura: agradeça; diga que não seguiu desta vez; cite 1 ponto positivo concreto (com base nos dados); dê 1 ou 2 sugestões práticas de desenvolvimento para os próximos processos, sem expor notas, nomes de avaliadores ou comentários internos; convide a se candidatar de novo. Nunca mencione idade, gênero, aparência, saúde, gravidez, religião, origem, deficiência ou vida pessoal, mesmo que apareçam nos dados. Máximo de 900 caracteres, sem assinatura. Responda só com JSON: {"mensagem": "texto"}' },
+    { role: 'user', content: `Nome: ${primeiro(a.perfil.nome)}\nVaga: ${v.titulo || a.vagaTitulo}\nRequisitos da vaga: ${String(v.requisitos || '').slice(0, 400)}\nEtapa a que chegou: ${ETAPA[a.etapa] || a.etapa}\nResultados: ${pontos || 'sem notas registradas'}\nObservações da equipe (use só para escolher o ponto positivo e as sugestões, nunca copie): ${fortes || 'nenhuma'}\nMotivo interno: ${($('#dc-mt', m) || {}).value || 'não informado'}\nEmpresa: ${S.emp.nome || ''}` }]));
+    const t = String(r.mensagem || '').trim(); if (!t) throw new Error('A IA não escreveu a mensagem.'); ta.value = `${t}\n\nEquipe de recrutamento · ${S.emp.nome || ''}`.trim(); toast('Mensagem escrita. Revise antes de enviar.');
+  } catch (e) { toast(e.message || 'Não deu para usar a IA agora.', true); } b.disabled = false; b.textContent = 'Personalizar com IA';
+}
+{ const _dc36 = decidir; decidir = function (a, res) { const r = _dc36.apply(this, arguments); try { if (res === 'reprovado') { const ta = document.getElementById('dc-m'), m = ta && ta.closest('.modal'); if (ta && !document.getElementById('rs36-ia')) { ta.insertAdjacentHTML('afterend', '<div class="row" style="margin-top:6px;gap:8px;align-items:center"><button type="button" class="btn sec sm" id="rs36-ia">Personalizar com IA</button><span class="hint">Usa as notas para escrever um retorno útil e gentil, sem expor nada interno.</span></div>'); $('#rs36-ia', m).onclick = () => rs36Retorno(a, m); } } } catch (e) { console.warn(e); } return r; }; }
+
+/* =================== 88: agenda do recrutador no celular (link de calendário que se atualiza) =================== */
+const RS36A = { doc: undefined, ult: '' };
+async function rs36AgendaDoc() { if (RS36A.doc !== undefined) return RS36A.doc; try { const q = await db.collection('agendaFeed').where('uid', '==', S.user.uid).limit(1).get(); RS36A.doc = q.empty ? null : { id: q.docs[0].id, ...q.docs[0].data() }; } catch (e) { RS36A.doc = null; } return RS36A.doc; }
+function rs36Eventos(todas) { const lim = Date.now() - 7 * 864e5; return S.d.ent.filter(e => e.status === 'agendada' && Date.parse(e.inicio) > lim && (todas || !(e.entrevistadores || []).length || e.entrevistadores.includes(S.user.uid))).sort((a, b) => a.inicio.localeCompare(b.inicio)).slice(0, 150)
+  .map(e => ({ id: e.id, inicio: e.inicio, duracao: +e.duracao || 30, titulo: `Entrevista: ${primeiro(e.candNome || 'candidato')} · ${e.vagaTitulo || ''}`.slice(0, 120), local: e.tipo === 'presencial' ? (e.local || '') : e.tipo === 'video' ? 'Vídeo pelo NEXUM Recrutamento' : 'Por telefone', tipo: e.tipo || '' })); }
+async function rs36AgendaSinc(forcar) {
+  const d = await rs36AgendaDoc(); if (!d) return; const ev = rs36Eventos(d.todas), k = JSON.stringify(ev); if (!forcar && k === RS36A.ult) return; RS36A.ult = k;
+  try { await db.collection('agendaFeed').doc(d.id).set({ uid: S.user.uid, eid: S.eid, nome: S.me.nome, empresa: S.emp.nome || '', todas: !!d.todas, eventos: ev, atualizadoEm: agora() }); } catch (e) { console.warn('agenda', e); }
+}
+async function rs36Agenda() {
+  const base = await rsAvBase(); if (!base) return toast('O serviço de agenda não está disponível agora.', true); let d = await rs36AgendaDoc();
+  const url = () => `${base}/rs/agenda/${d.id}.ics`, wc = () => url().replace(/^https:/, 'webcal:');
+  const tela = () => modal('Agenda no celular', d ? `<p style="margin-top:0">Adicione este link uma vez e as entrevistas aparecem sozinhas no calendário do celular, com aviso antes. Quando você marca ou remarca, ele se atualiza (o Google pode levar algumas horas).</p>
+    <div class="fld"><label for="rs36-ag">Seu link de calendário</label><input class="inp" id="rs36-ag" readonly value="${esc(url())}" onclick="this.select()"></div>
+    <label class="row hint" style="gap:8px"><input type="checkbox" id="rs36-at" ${d.todas ? 'checked' : ''}> Mostrar todas as entrevistas da empresa (não só as minhas)</label>
+    <ul class="hint" style="padding-left:18px"><li><b>iPhone:</b> toque em “Abrir no iPhone” e confirme “Assinar”.</li><li><b>Android (Google Agenda):</b> no computador, abra calendar.google.com › Outras agendas › + › Do URL e cole o link.</li></ul><p class="note">O link é secreto: quem tiver o link vê o nome do candidato e o horário. Se ele vazar, gere um novo.</p>`
+    : '<p style="margin-top:0">Gere um link de calendário só seu. Ele mostra as entrevistas em que você participa direto no calendário do celular (iPhone ou Google Agenda) e se atualiza sozinho.</p>', {
+    foot: d ? '<button class="btn ghost" id="rs36-an" style="margin-right:auto">Gerar novo link</button><a class="btn sec" id="rs36-ai">Abrir no iPhone</a><button class="btn" id="rs36-ac">Copiar link</button>' : '<button class="btn sec" data-close>Cancelar</button><button class="btn" id="rs36-ag2">Gerar meu link</button>', onMount: m => {
+      const g = async () => { const id = uid(24); if (d) await db.collection('agendaFeed').doc(d.id).delete().catch(() => { }); d = RS36A.doc = { id, todas: d ? !!d.todas : false }; RS36A.ult = ''; await rs36AgendaSinc(true); closeModal(true); tela(); };
+      if (!d) return $('#rs36-ag2', m).onclick = () => g().catch(er => toast(msgErro(er), true));
+      $('#rs36-ai', m).href = wc(); $('#rs36-ac', m).onclick = () => navigator.clipboard.writeText(url()).then(() => toast('Link copiado.')).catch(() => toast('Selecione e copie o link.', true));
+      $('#rs36-an', m).onclick = () => confirmar('Gerar um novo link? O link antigo para de funcionar.', () => g().catch(er => toast(msgErro(er), true)), 'Gerar novo');
+      $('#rs36-at', m).onchange = e => { d.todas = e.target.checked; RS36A.ult = ''; rs36AgendaSinc(true); }; } });
+  tela();
+}
+{ const _ve36 = vEnt; vEnt = function (el) { const r = _ve36.apply(this, arguments); try { const t = el.querySelector('.tabs'); if (t && !$('#rs36-agb', el)) { t.insertAdjacentHTML('beforeend', '<button id="rs36-agb" style="margin-left:auto">📅 Agenda no celular</button>'); $('#rs36-agb', el).onclick = e => { e.stopPropagation(); rs36Agenda(); }; } } catch (e) { console.warn(e); } return r; }; }
+{ const _rd36 = render; render = function () { const r = _rd36.apply(this, arguments); try { clearTimeout(RS36A.t); RS36A.t = setTimeout(() => { if (S.user && S.eid && S.d && S.d.ent) rs36AgendaSinc(false); }, 4000); } catch (e) { } return r; }; }
 
 </script>
 </body></html>
