@@ -2624,6 +2624,14 @@ if (typeof vQuest === 'function') { const _vqSim = vQuest; vQuest = function (el
 
 
 
+
+
+
+
+
+
+
+
 <script>
 /* =====================================================================
    LOTE 28 (Recrutador): menu Treinamento com as videoaulas só do
@@ -3028,6 +3036,89 @@ function cpResponder({ titulo, intro, chave, salvar, aoFim }) {
   .cp-res{display:grid;gap:10px}.cp-rec{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap;padding:10px 12px;border-radius:12px}.cp-rec b{font-size:17px}.cp-rec span{font-size:13px;opacity:.8}.cp-ok.cp-rec,.cp-rec.cp-ok{background:rgba(22,163,74,.12);color:#15803d}.cp-rec.cp-warn{background:rgba(217,119,6,.13);color:#b45309}.cp-rec.cp-bad{background:rgba(198,45,70,.12);color:#b91c3c}
   .cp-rs{margin:0;line-height:1.5}.cp-bars{display:grid;gap:5px}.cp-bar{display:grid;grid-template-columns:minmax(120px,190px) 1fr 34px;gap:8px;align-items:center;font-size:13px}.cp-bar i{height:8px;border-radius:99px;background:rgba(127,127,127,.2);overflow:hidden}.cp-bar i b{display:block;height:100%;background:#1f5eff}.cp-bar em{font-style:normal;text-align:right;font-weight:700}
   .cp-conf,.cp-av{margin:0;font-size:12px;opacity:.75}.cp-l ul{margin:4px 0 0;padding-left:18px}.cp-l li{margin:2px 0;font-size:14px}`; document.head.appendChild(st); })();
+
+</script>
+<script>
+/* =====================================================================
+   LOTE 35 (Recrutador):
+   - Entrevista confirmada pelo WhatsApp: o candidato responde 1 (confirmo) ou 2 (remarcar)
+   - Retorno automático para quem não atende uma pergunta eliminatória (opcional)
+   - A previsão do questionário comportamental vai junto para a admissão no NEXUM RH
+   ===================================================================== */
+const RS35 = { rodando: false, ult: 0 };
+const rs35Cfg = () => ({ confirmaWhats: true, autoElim: false, ...((S.emp && S.emp.rs35) || {}) });
+async function rs35Api(rota, corpo) {
+  const base = await rsAvBase(); if (!base || !auth.currentUser) return null;
+  const tk = await auth.currentUser.getIdToken(), r = await fetch(base + rota, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tk }, body: JSON.stringify({ eid: S.eid, ...corpo }) });
+  return r.ok ? r.json() : null;
+}
+/* pede a confirmação de cada entrevista agendada (uma vez), com WhatsApp ligado nos avisos */
+async function rs35PedirConfirmacoes() {
+  const c = rs35Cfg(); if (!c.confirmaWhats || avisoCanais().whats === false || !ehEditor()) return 0; let n = 0; const agoraMs = Date.now();
+  const l = (S.d.ent || []).filter(e => e.status === 'agendada' && !e.waPedidoEm && Date.parse(e.inicio) > agoraMs + 30 * 60e3 && Date.parse(e.inicio) < agoraMs + 10 * 864e5 && (!e.criadoEm || agoraMs - Date.parse(e.criadoEm) > 90e3));
+  for (const e of l.slice(0, 10)) {
+    const a = S.d.apps.find(x => x.id === e.appId); if (!a || a.anonimizado || ((a.confirmacoes || {})[e.id]) || String((a.perfil || {}).telefone || '').replace(/\D/g, '').length < 10) continue;
+    try { const r = await rs35Api('/api/rs/confirmar', { appId: a.id, entId: e.id }); if (r && r.ok) { await sub(S.eid, 'entrevistas').doc(e.id).update({ waPedidoEm: agora() }); e.waPedidoEm = agora(); n++; } } catch (er) { console.warn('confirmar', er); }
+  }
+  return n;
+}
+/* aplica as respostas que chegaram pelo WhatsApp */
+async function rs35AplicarRespostas() {
+  if (!ehEditor()) return 0; let j = null; try { j = await rs35Api('/api/rs/respostas', {}); } catch (e) { } const l = (j && j.respostas) || []; if (!l.length) return 0; const feitas = [];
+  for (const r of l) {
+    const a = S.d.apps.find(x => x.id === r.appId), e = (S.d.ent || []).find(x => x.id === r.entId); if (!a) { feitas.push(r.id); continue; }
+    const nome = primeiro(a.perfil.nome), quando = e ? `${fdt(e.inicio)}` : '';
+    try {
+      if (r.resposta === '1') { await sub(S.eid, 'apps').doc(a.id).update({ confirmacoes: { ...(a.confirmacoes || {}), [r.entId]: r.em || agora() }, mensagens: [...(a.mensagens || []), { de: 'cand', t: `Confirmei a entrevista${quando ? ` de ${quando}` : ''} pelo WhatsApp.`, em: r.em || agora(), via: 'whatsapp' }], historico: [...(a.historico || []), { t: 'Confirmou a entrevista pelo WhatsApp', em: r.em || agora(), por: 'WhatsApp' }] }); toast(`${nome} confirmou a entrevista pelo WhatsApp.`); }
+      else if (r.resposta === '2') { if (e) await sub(S.eid, 'entrevistas').doc(e.id).update({ remarcar: true, remarcarEm: r.em || agora() }); await sub(S.eid, 'apps').doc(a.id).update({ mensagens: [...(a.mensagens || []), { de: 'cand', t: `Preciso remarcar a entrevista${quando ? ` de ${quando}` : ''}.${r.texto ? ` ${String(r.texto).slice(0, 300)}` : ''} (respondido pelo WhatsApp)`, em: r.em || agora(), via: 'whatsapp' }], historico: [...(a.historico || []), { t: 'Pediu para remarcar a entrevista pelo WhatsApp', em: r.em || agora(), por: 'WhatsApp' }] }); toast(`${nome} pediu para remarcar a entrevista. Veja no Painel.`, true); }
+      feitas.push(r.id);
+    } catch (er) { console.warn('resposta', er); }
+  }
+  if (feitas.length) { try { await rs35Api('/api/rs/respostas', { feitas }); } catch (e) { } if (S.view === 'painel') rerender(); }
+  return feitas.length;
+}
+/* retorno automático: não atende uma pergunta eliminatória (só inscrições depois de ligar a opção) */
+async function rs35AutoElim() {
+  const c = rs35Cfg(); if (!c.autoElim || !c.desde || !ehEditor()) return 0; let n = 0;
+  const l = S.d.apps.filter(a => ['inscrito', 'triagem'].includes(a.etapa) && !a.decisao && !a.anonimizado && !a.autoElimEm && (a.criadoEm || '') >= c.desde);
+  for (const a of l.slice(0, 20)) {
+    let tri = null; try { tri = notas(a).tri; } catch (e) { } if (!tri || !tri.elim) continue;
+    const vaga = vagaDe(a.vagaId).titulo || a.vagaTitulo, t = msg('reprovado', { nome: primeiro(a.perfil.nome), vaga });
+    try { await sub(S.eid, 'apps').doc(a.id).update({ etapa: 'reprovado', autoElimEm: agora(), decisao: { resultado: 'reprovado', msg: t, em: agora(), por: 'Retorno automático' }, atualizadoEm: agora(), mensagens: [...(a.mensagens || []), { de: 'rh', t, por: 'Retorno automático', em: agora() }], historico: [...(a.historico || []), { t: 'Reprovado automaticamente: não atende uma pergunta eliminatória', em: agora(), por: 'Sistema' }] });
+      await sub(S.eid, 'priv').doc(a.id).set({ motivo: 'Não atende requisito eliminatório' }, { merge: true }); n++; } catch (er) { console.warn('autoElim', er); }
+  }
+  if (n) { log(`Retorno automático para ${n} candidato(s) que não atendem pergunta eliminatória`); toast(`${n} candidato(s) que não atendem uma pergunta eliminatória receberam o retorno automático.`); }
+  return n;
+}
+async function rs35Ciclo() { if (RS35.rodando || !S.me || !S.eid || !S.d || !S.d.apps) return; RS35.rodando = true; try { await rs35AplicarRespostas(); await rs35PedirConfirmacoes(); await rs35AutoElim(); } catch (e) { console.warn(e); } finally { RS35.rodando = false; RS35.ult = Date.now(); } }
+setInterval(rs35Ciclo, 120000); setTimeout(rs35Ciclo, 6000); setTimeout(rs35Ciclo, 20000);
+
+/* Painel: pedidos para remarcar */
+{ const _vp35 = vPainel; vPainel = function (el) { const r = _vp35.apply(this, arguments); try {
+  const l = (S.d.ent || []).filter(e => e.remarcar && e.status === 'agendada'); if (!l.length || $('#rm35', el)) return r;
+  const s = document.createElement('section'); s.className = 'panel'; s.id = 'rm35'; s.style.borderLeft = '4px solid #F2A65A';
+  s.innerHTML = `<h2 style="margin-bottom:6px">Pediram para remarcar a entrevista</h2><ul class="list">${l.map(e => `<li class="link" data-ab="${e.appId}"><div class="t"><div><b>${esc(e.candNome || '')}</b> · ${esc(e.vagaTitulo || '')}</div><div>Estava marcada para ${fdt(e.inicio)} · respondeu pelo WhatsApp em ${fdt(e.remarcarEm)}</div></div></li>`).join('')}</ul><p class="hint" style="margin:6px 0 0">Abra a ficha, cancele a entrevista e marque outro horário (ou convide para escolher o horário).</p>`;
+  const k = el.querySelector('.kpis'); if (k) k.after(s); else el.prepend(s);
+  $$('[data-ab]', s).forEach(x => x.onclick = () => abrirCand(x.dataset.ab));
+} catch (e) { console.warn(e); } return r; }; }
+/* Configurações > Mensagens padrão */
+{ const _vc35 = vConfig; vConfig = function (el, aba) { _vc35.apply(this, arguments); try {
+  if ((aba || S.cfgAba) !== 'msg' || !ehAdmin()) return; const w = $('#cf-b', el); if (!w || $('#rs35-p', w)) return; const c = rs35Cfg();
+  const s = document.createElement('section'); s.className = 'panel'; s.id = 'rs35-p';
+  s.innerHTML = `<h2 style="margin-bottom:4px">Automático no WhatsApp e na triagem</h2>
+    <label class="row" style="gap:8px;margin:8px 0 4px"><input type="checkbox" id="rs35-cw" ${c.confirmaWhats ? 'checked' : ''}> Pedir a confirmação da entrevista pelo WhatsApp</label><p class="hint" style="margin:0 0 10px 26px">O candidato recebe a data e o local e responde 1 para confirmar ou 2 para remarcar. A resposta aparece na ficha e no Painel.</p>
+    <label class="row" style="gap:8px;margin:0 0 4px"><input type="checkbox" id="rs35-ae" ${c.autoElim ? 'checked' : ''}> Dar o retorno automático para quem não atende uma pergunta eliminatória</label><p class="hint" style="margin:0 0 10px 26px">Ex.: respondeu "não" para trabalhar aos sábados. O candidato recebe a mensagem de reprovação gentil e continua no banco de talentos. Vale só para inscrições feitas depois de ligar.</p>
+    <div class="row end"><button class="btn" id="rs35-ok">Salvar</button></div>`;
+  const ref = $('#ac-p', w); if (ref) ref.after(s); else w.appendChild(s);
+  $('#rs35-ok', s).onclick = async () => { const v = { confirmaWhats: $('#rs35-cw', s).checked, autoElim: $('#rs35-ae', s).checked, desde: $('#rs35-ae', s).checked ? (c.autoElim && c.desde ? c.desde : agora()) : '' };
+    try { await emp(S.eid).update({ rs35: v }); S.emp.rs35 = v; log('Alterou a confirmação pelo WhatsApp e o retorno automático da triagem'); toast('Salvo.'); rs35Ciclo(); } catch (e) { toast(msgErro(e), true); } };
+} catch (e) { console.warn(e); } }; }
+/* ficha: mostra a resposta do WhatsApp em cada entrevista */
+{ const _ac35 = abrirCand; abrirCand = function (id) { const r = _ac35.apply(this, arguments); try { setTimeout(() => { const a = S.d.apps.find(x => x.id === id), b = document.querySelector('#modal-root .modal-b'); if (!a || !b || b.querySelector('#wc35')) return;
+  const l = (S.d.ent || []).filter(e => e.appId === id && e.status === 'agendada' && (e.waPedidoEm || e.remarcar)); if (!l.length) return; const conf = a.confirmacoes || {};
+  b.insertAdjacentHTML('afterbegin', `<div id="wc35" class="note" style="margin:0 0 10px">${l.map(e => `📱 Entrevista de ${fdt(e.inicio)}: ${e.remarcar ? '<b style="color:var(--bad)">pediu para remarcar</b>' : conf[e.id] ? '<b style="color:var(--ok,#0F7A4F)">confirmada</b>' : 'aguardando a resposta no WhatsApp'}`).join('<br>')}</div>`); }, 80); } catch (e) { } return r; }; }
+/* admissão no NEXUM RH: leva a previsão do questionário comportamental */
+{ const _pr35 = payloadRH; payloadRH = function (a) { const r = _pr35.apply(this, arguments); try { const pv = privDe(a.id).comport; if (pv && pv.ia && pv.p) r.comport = { rec: String(pv.ia.recomendacao || ''), nota: +pv.ia.nota || 0, resumo: String(pv.ia.resumo || '').slice(0, 400), em: String((a.comport || {}).respondidoEm || '') }; } catch (e) { } return r; }; }
 
 </script>
 </body></html>
