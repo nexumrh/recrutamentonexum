@@ -981,6 +981,9 @@ document.head.insertAdjacentHTML('beforeend', '<style>.cv-box{display:flex;gap:1
 
 
 
+
+
+
 <script>
 /* =====================================================================
    LOTE 32 (Candidato): ficha de pré-admissão. Quem aceitou a proposta
@@ -1379,6 +1382,28 @@ window.ERRO38 = { sistema: 'Candidato', ctx: () => ({ tela: (typeof P !== 'undef
    altura (fácil de tocar com o dedo). No computador nada muda.
    ===================================================================== */
 (function () { const st = document.createElement('style'); st.id = 'toque38'; st.textContent = '@media (max-width:760px),(pointer:coarse) and (max-width:1024px){.btn,a.btn,button.btn,.btn.sm,.btn.ghost,.btn.sec{min-height:40px!important;height:auto}.modal-h button,button.x,header button,.tg-abre,button[aria-label^="Fechar"]{min-height:40px;min-width:40px}.tabs button,.chip,button.on,.nav button,.nav-g,.bnav button,.tb,select,select.inp,input.inp:not([type=checkbox]):not([type=radio]){min-height:40px}.menu-btn,.ib,.ferr{min-width:40px;min-height:40px}.f36{display:inline-flex;align-items:center;justify-content:center;min-width:36px;min-height:40px;margin-top:-10px;margin-bottom:-10px}.side .nav button,.side nav button{min-height:40px}}'; document.head.appendChild(st); })();
+
+</script>
+<script>
+/* =====================================================================
+   LOTE 39 (Candidato): quando a candidatura chega, quando o candidato
+   marca a entrevista e quando confirma presença, o recrutador recebe
+   aviso no WhatsApp e no e-mail (se ligou os avisos no Recrutamento).
+   ===================================================================== */
+const AVR39 = { k: () => `rs39av:${EID}:${(P.user && P.user.uid) || ''}`, enviando: false };
+const avr39Feitos = () => { try { return new Set(JSON.parse(localStorage.getItem(AVR39.k()) || '[]')); } catch (e) { return new Set(); } };
+async function avr39Mandar(corpo) { try { const b = await cv36Base(); if (!b || !auth.currentUser) return false; const tk = await auth.currentUser.getIdToken();
+  const r = await fetch(b + '/api/rs/aviso-rec', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tk }, body: JSON.stringify({ eid: EID, ...corpo }) }); return r.ok; } catch (e) { return false; } }
+async function avr39() {
+  if (AVR39.enviando || !EID || !P.user) return; AVR39.enviando = true;
+  try { const feitos = avr39Feitos(), rec = iso => iso && Date.now() - Date.parse(iso) < 25 * 60e3, fila = [];
+    (P.apps || []).forEach(a => { if (rec(a.criadoEm)) fila.push({ k: `novo|${a.id}`, c: { tipo: 'novo', appId: a.id } });
+      Object.entries(a.confirmacoes || {}).forEach(([ent, em]) => { if (rec(em)) fila.push({ k: `conf|${a.id}|${ent}`, c: { tipo: 'confirmou', appId: a.id, entId: ent } }); }); });
+    (P.ents || []).forEach(e => { if (e.origem === 'candidato' && rec(e.criadoEm) && e.appId) fila.push({ k: `ent|${e.id}`, c: { tipo: 'entrevista', appId: e.appId, entId: e.id } }); });
+    for (const x of fila) { if (feitos.has(x.k)) continue; if (await avr39Mandar(x.c)) { feitos.add(x.k); try { localStorage.setItem(AVR39.k(), JSON.stringify([...feitos].slice(-60))); } catch (e) { } } }
+  } finally { AVR39.enviando = false; }
+}
+{ const _rd39 = render; render = function () { const r = _rd39.apply(this, arguments); setTimeout(avr39, 400); return r; }; }
 
 </script>
 </body></html>
