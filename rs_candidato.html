@@ -961,6 +961,20 @@ document.head.insertAdjacentHTML('beforeend', '<style>.cv-box{display:flex;gap:1
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <script>
 /* =====================================================================
    LOTE 32 (Candidato): ficha de pré-admissão. Quem aceitou a proposta
@@ -1211,6 +1225,25 @@ function cv36Abrir() {
     } });
 }
 { const _vp36 = vPerfil; vPerfil = function (el) { const r = _vp36.apply(this, arguments); try { const g = $('#cv-g', el); if (g && !$('#cv36-b', el)) { g.insertAdjacentHTML('beforebegin', '<button class="btn sec" id="cv36-b">✨ Montar com a IA</button>'); $('#cv36-b', el).onclick = cv36Abrir; } } catch (e) { console.warn(e); } return r; }; }
+
+</script>
+<script>
+/* =====================================================================
+   LOTE 37 (Candidato): inscrição incompleta. Quem começa a se candidatar
+   e não termina recebe um lembrete por e-mail em 3 horas (e outro em 2
+   dias). Quando a candidatura chega, os lembretes param sozinhos.
+   ===================================================================== */
+const LB37 = { k: () => `rs37lb:${EID}`, cancelou: false };
+const lb37Lista = () => { try { return JSON.parse(localStorage.getItem(LB37.k()) || '[]'); } catch (e) { return []; } };
+const lb37Grava = l => { try { localStorage.setItem(LB37.k(), JSON.stringify(l.slice(-30))); } catch (e) { } };
+async function lb37Api(corpo) { try { const b = await cv36Base(); if (!b || !auth.currentUser || auth.currentUser.isAnonymous) return null; const tk = await auth.currentUser.getIdToken();
+  const r = await fetch(b + '/api/rs/lembrete', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + tk }, body: JSON.stringify({ eid: EID, ...corpo }) }); return r.ok ? r.json() : null; } catch (e) { return null; } }
+{ const _cd37 = candidatar; candidatar = async function (v) { try { if (EID && v && P.user && !ehAnonimo() && !(P.apps || []).some(a => a.vagaId === v.id)) { const l = lb37Lista(); if (!l.includes(v.id)) { lb37Grava([...l, v.id]); lb37Api({ acao: 'criar', vagaId: v.id, vagaTitulo: v.titulo, empresa: (P.emp || {}).nome || '', nome: (P.perfil || {}).nome || P.novoNome || '' }); } } } catch (e) { } return _cd37.apply(this, arguments); }; }
+/* candidatura enviada (aqui ou em outro aparelho): para os lembretes */
+{ const _rd37 = render; render = function () { const r = _rd37.apply(this, arguments); try { if (!EID || !P.user || ehAnonimo()) return r; const apps = (P.apps || []).map(a => a.vagaId).filter(Boolean); if (!apps.length) return r;
+  const l = lb37Lista(), fe = l.filter(id => apps.includes(id)); if (fe.length) { lb37Grava(l.filter(id => !apps.includes(id))); lb37Api({ acao: 'cancelar', vagas: fe }); }
+  else if (!LB37.cancelou) { LB37.cancelou = true; lb37Api({ acao: 'cancelar', vagas: apps.slice(-40) }); }
+} catch (e) { } return r; }; }
 
 </script>
 </body></html>
